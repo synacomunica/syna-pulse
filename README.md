@@ -27,3 +27,15 @@ npm run dev
 - TypeScript
 - React
 - Tailwind CSS
+
+## Publicação na Vercel
+
+O navegador usa `VITE_SUPABASE_PUBLISHABLE_KEY` (chave pública Publishable ou anon)
+e `VITE_SUPABASE_URL`. Para a URL, o build também aceita `SUPABASE_URL` e
+`NEXT_PUBLIC_SUPABASE_URL`, nessa ordem de prioridade após `VITE_SUPABASE_URL`.
+Assim, a URL criada pela integração do Supabase pode ser usada pelo frontend.
+Somente a URL pública é exposta por essa compatibilidade; chaves administrativas
+continuam exclusivas do servidor.
+
+Configure as variáveis no ambiente Production e faça um novo deploy após salvar.
+O arquivo `.env` local não é enviado ao GitHub nem à Vercel.
