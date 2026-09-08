@@ -1,0 +1,130 @@
+import { z } from "zod";
+import type { MarketingPlanContent } from "./marketing-plan";
+
+const text = z.string().default("");
+const number = z.number().finite().nullable().default(null);
+const texts = z.array(z.string()).default([]);
+const object = <T extends z.ZodRawShape>(shape: T) =>
+  z.object(shape).default(() => z.object(shape).parse({}));
+const list = <T extends z.ZodTypeAny>(item: T) => z.array(item).default([]);
+const objective = object({
+  descricao: text,
+  problema: text,
+  pilar: text,
+  etapa: text,
+  kpi: text,
+  valor_atual: number,
+  meta: number,
+  prazo: text,
+});
+export const marketingPlanSchema = object({
+  resumo_estrategico: text,
+  publico_estrategico: text,
+  diagnostico_partida: object({
+    gargalo_pilar: text,
+    subdimensao: text,
+    problema: text,
+    causa: text,
+    oportunidade: text,
+    evidencias: texts,
+  }),
+  subdimensoes: list(
+    object({
+      pilar: text,
+      nome: text,
+      nota: z.number().finite().default(0),
+      problema: text,
+      evidencia: text,
+      oportunidade: text,
+    }),
+  ),
+  jornada_5a: list(
+    object({
+      etapa: text,
+      nota: z.number().finite().default(0),
+      diagnostico: text,
+      problemas: texts,
+      evidencias: texts,
+    }),
+  ),
+  gargalo_jornada: object({
+    etapa: text,
+    diagnostico: text,
+    evidencias: texts,
+    causa_hipotese: text,
+  }),
+  relacao_4p_5a: object({
+    pilar: text,
+    subdimensao: text,
+    etapa: text,
+    problema: text,
+    causa: text,
+  }),
+  mudanca_comportamento: object({ estado_atual: text, estado_desejado: text }),
+  objetivo_principal: objective,
+  objetivos_secundarios: list(objective),
+  estrategia_central: text,
+  estrategias_5a: list(object({ etapa: text, estrategia: text, justificativa: text })),
+  quatro_cs: list(object({ de: text, para: text, oportunidades: texts })),
+  acoes: list(
+    object({
+      titulo: text,
+      descricao: text,
+      categoria: text,
+      objetivo: text,
+      estrategia: text,
+      pilar: text,
+      etapa: text,
+      responsavel: text,
+      prazo: text,
+      kpi: text,
+      meta: text,
+      impacto: text,
+      urgencia: text,
+      esforco: text,
+      prioridade: text,
+      fase: text,
+    }),
+  ),
+  kpis: list(object({ etapa: text, nome: text, valor_atual: number, meta: number })),
+  cronograma: list(object({ periodo: text, foco: text, acoes: texts })),
+  plano_90_dias: list(object({ fase: text, objetivo: text, acoes: texts })),
+  funil: list(object({ etapa: text, valor: number })),
+  par_bar: object({ par: number, bar: number, observacao: text }),
+  riscos: texts,
+  alertas: list(object({ titulo: text, motivo: text, recomendacao: text })),
+  dados_insuficientes: texts,
+  aprendizados: list(
+    object({ hipotese: text, acao: text, resultado: text, aprendizado: text, decisao: text }),
+  ),
+});
+
+export function parseMarketingPlan(value: unknown): MarketingPlanContent {
+  return marketingPlanSchema.parse(value);
+}
+
+export const PLAN_SECTION_LABELS: Record<keyof MarketingPlanContent, string> = {
+  resumo_estrategico: "Resumo estratégico",
+  publico_estrategico: "Público estratégico",
+  diagnostico_partida: "Diagnóstico de partida",
+  subdimensoes: "Subdimensões",
+  jornada_5a: "Jornada 5A",
+  gargalo_jornada: "Gargalo da jornada",
+  relacao_4p_5a: "Relação 4P e 5A",
+  mudanca_comportamento: "Mudança de comportamento",
+  objetivo_principal: "Objetivo principal",
+  objetivos_secundarios: "Objetivos secundários",
+  estrategia_central: "Estratégia central",
+  estrategias_5a: "Estratégias 5A",
+  quatro_cs: "Quatro Cs",
+  acoes: "Ações",
+  kpis: "KPIs",
+  cronograma: "Cronograma",
+  plano_90_dias: "Plano de 90 dias",
+  funil: "Funil",
+  par_bar: "PAR / BAR",
+  riscos: "Riscos",
+  alertas: "Alertas",
+  dados_insuficientes: "Dados insuficientes",
+  aprendizados: "Aprendizados",
+};

@@ -1,0 +1,292 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * SYNA — Design System
+ * Baseado no Manual de Identidade Visual da Syna (Senhor Studio, 2025).
+ * Paleta: #FF0B45 (primária) · #0E4963 (azul profundo) · #10DDDD (ciano)
+ * Tipografia: Cabinet Grotesk (títulos) · Switzer (texto)
+ */
+
+@theme inline {
+  --font-display: "Cabinet Grotesk", "Switzer", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Switzer", ui-sans-serif, system-ui, sans-serif;
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-soft: var(--primary-soft);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-ring-offset-background: var(--background);
+
+  --color-ink: var(--ink);
+  --color-ink-foreground: var(--ink-foreground);
+  --color-ink-muted: var(--ink-muted);
+  --color-cyan: var(--brand-cyan);
+  --color-cyan-foreground: var(--brand-cyan-foreground);
+
+  --color-critical: var(--critical);
+  --color-warning: var(--warning);
+  --color-good: var(--good);
+  --color-strong: var(--strong);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --shadow-card:
+    0 1px 2px oklch(0.383 0.072 232.9 / 0.06), 0 8px 24px -12px oklch(0.383 0.072 232.9 / 0.14);
+  --shadow-lift:
+    0 2px 6px oklch(0.383 0.072 232.9 / 0.08), 0 18px 40px -18px oklch(0.383 0.072 232.9 / 0.28);
+}
+
+:root {
+  --radius: 0.875rem;
+
+  --background: oklch(0.988 0.001 286.4);
+  --foreground: oklch(0.22 0.02 250);
+
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.22 0.02 250);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.22 0.02 250);
+
+  --primary: oklch(0.635 0.252 20);
+  --primary-foreground: oklch(0.99 0 0);
+  --primary-soft: oklch(0.949 0.027 3.4);
+
+  --secondary: oklch(0.97 0.003 264.5);
+  --secondary-foreground: oklch(0.383 0.072 232.9);
+
+  --muted: oklch(0.968 0.004 250);
+  --muted-foreground: oklch(0.52 0.02 250);
+
+  --accent: oklch(0.945 0.025 225.3);
+  --accent-foreground: oklch(0.383 0.072 232.9);
+
+  --destructive: oklch(0.577 0.215 27.3);
+  --destructive-foreground: oklch(0.99 0 0);
+
+  --border: oklch(0.916 0.005 250);
+  --input: oklch(0.9 0.006 250);
+  --ring: oklch(0.635 0.252 20);
+
+  --ink: oklch(0.383 0.072 232.9);
+  --ink-foreground: oklch(0.97 0.01 220);
+  --ink-muted: oklch(0.308 0.057 234.2);
+
+  --brand-cyan: oklch(0.813 0.137 194.8);
+  --brand-cyan-foreground: oklch(0.28 0.05 234);
+
+  --critical: oklch(0.577 0.215 27.3);
+  --warning: oklch(0.769 0.165 70.1);
+  --good: oklch(0.638 0.125 233.4);
+  --strong: oklch(0.627 0.17 149.2);
+
+  --chart-1: oklch(0.635 0.252 20);
+  --chart-2: oklch(0.383 0.072 232.9);
+  --chart-3: oklch(0.813 0.137 194.8);
+  --chart-4: oklch(0.638 0.125 233.4);
+  --chart-5: oklch(0.689 0.207 10.5);
+
+  --sidebar: oklch(0.308 0.057 234.2);
+  --sidebar-foreground: oklch(0.94 0.01 220);
+  --sidebar-primary: oklch(0.635 0.252 20);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-accent: oklch(0.383 0.072 232.9);
+  --sidebar-accent-foreground: oklch(0.98 0.01 220);
+  --sidebar-border: oklch(0.383 0.072 232.9);
+  --sidebar-ring: oklch(0.813 0.137 194.8);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    font-feature-settings: "ss01", "cv01";
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
+}
+
+@utility text-display {
+  font-family: var(--font-display);
+  letter-spacing: -0.025em;
+  font-weight: 700;
+}
+
+@utility surface-card {
+  background-color: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-card);
+}
+
+@utility input-base {
+  width: 100%;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-input);
+  background-color: var(--color-card);
+  padding: 0.55rem 0.75rem;
+  font-size: 0.875rem;
+  color: var(--color-foreground);
+  outline: none;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+
+  &::placeholder {
+    color: var(--color-muted-foreground);
+  }
+
+  &:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-primary) 18%, transparent);
+  }
+}
+
+@utility btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: var(--radius-lg);
+  background-color: var(--color-primary);
+  padding: 0.55rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-primary-foreground);
+  transition: background-color 0.15s ease;
+
+  &:hover {
+    background-color: color-mix(in oklab, var(--color-primary) 90%, black);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+  }
+}
+
+@utility btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  background-color: var(--color-card);
+  padding: 0.55rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-foreground);
+  transition: background-color 0.15s ease;
+
+  &:hover {
+    background-color: var(--color-accent);
+  }
+}
+
+/* Impressão / exportação em PDF com identidade Syna */
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm 12mm 16mm;
+  }
+
+  body {
+    background: #fff;
+  }
+
+  aside,
+  nav,
+  header,
+  .print\:hidden,
+  [data-print="hide"] {
+    display: none !important;
+  }
+
+  .print-area {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+
+  .surface-card {
+    box-shadow: none !important;
+    border: 1px solid #d9d9d9 !important;
+    break-inside: avoid;
+  }
+
+  article,
+  section {
+    break-inside: avoid;
+  }
+
+  a[href]::after {
+    content: "";
+  }
+
+  .print-footer {
+    display: block !important;
+    margin-top: 16px;
+    border-top: 1px solid #d9d9d9;
+    padding-top: 8px;
+    font-size: 10px;
+    color: #666;
+  }
+}
+
+.print-footer {
+  display: none;
+}
