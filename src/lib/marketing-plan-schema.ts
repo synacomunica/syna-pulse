@@ -32,7 +32,7 @@ export const marketingPlanSchema = object({
     object({
       pilar: text,
       nome: text,
-      nota: z.number().finite().default(0),
+      nota: z.number().finite().min(0).max(10).nullable().default(null),
       problema: text,
       evidencia: text,
       oportunidade: text,
@@ -41,7 +41,7 @@ export const marketingPlanSchema = object({
   jornada_5a: list(
     object({
       etapa: text,
-      nota: z.number().finite().default(0),
+      nota: z.number().finite().min(0).max(10).nullable().default(null),
       diagnostico: text,
       problemas: texts,
       evidencias: texts,
@@ -90,6 +90,11 @@ export const marketingPlanSchema = object({
   cronograma: list(object({ periodo: text, foco: text, acoes: texts })),
   plano_90_dias: list(object({ fase: text, objetivo: text, acoes: texts })),
   funil: list(object({ etapa: text, valor: number })),
+  funil_contexto: object({
+    periodo: text,
+    populacao: text,
+    verificado: z.boolean().default(false),
+  }),
   par_bar: object({ par: number, bar: number, observacao: text }),
   riscos: texts,
   alertas: list(object({ titulo: text, motivo: text, recomendacao: text })),
@@ -122,6 +127,7 @@ export const PLAN_SECTION_LABELS: Record<keyof MarketingPlanContent, string> = {
   cronograma: "Cronograma",
   plano_90_dias: "Plano de 90 dias",
   funil: "Funil",
+  funil_contexto: "Confiabilidade do funil",
   par_bar: "PAR / BAR",
   riscos: "Riscos",
   alertas: "Alertas",

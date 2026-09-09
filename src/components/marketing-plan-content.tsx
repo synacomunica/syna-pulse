@@ -141,13 +141,30 @@ function Field({
         {value === null || value === undefined || value === "" ? "Não informado" : String(value)}
       </p>
     );
+  if (base instanceof z.ZodBoolean)
+    return (
+      <label className="flex items-center gap-2">
+        <input
+          type="checkbox"
+          checked={Boolean(value)}
+          onChange={(e) => onChange(e.target.checked)}
+          aria-label={name}
+        />
+        Confirmo que as contagens são verificadas, do mesmo período e população
+      </label>
+    );
   const numeric = base instanceof z.ZodNumber || base instanceof z.ZodNullable;
+  const numberSchema = base instanceof z.ZodNullable ? base.unwrap() : base;
+  const min = numberSchema instanceof z.ZodNumber ? numberSchema.minValue : null;
+  const max = numberSchema instanceof z.ZodNumber ? numberSchema.maxValue : null;
   return numeric ? (
     <input
       aria-label={name}
       className="input-base"
       type="number"
       step="any"
+      min={min ?? undefined}
+      max={max ?? undefined}
       value={value == null ? "" : Number(value)}
       onChange={(event) =>
         onChange(
@@ -155,7 +172,7 @@ function Field({
             ? base instanceof z.ZodNullable
               ? null
               : 0
-            : Number(event.target.value),
+            : Math.min(max ?? Infinity, Math.max(min ?? -Infinity, Number(event.target.value))),
         )
       }
     />

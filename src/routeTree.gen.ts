@@ -21,6 +21,7 @@ import { Route as AuthenticatedFormulariosRouteImport } from './routes/_authenti
 import { Route as AuthenticatedMatrizRouteImport } from './routes/_authenticated/matriz'
 import { Route as AuthenticatedPerformanceRouteImport } from './routes/_authenticated/performance'
 import { Route as AuthenticatedPlanoDeAcaoRouteImport } from './routes/_authenticated/plano-de-acao'
+import { Route as AuthenticatedPlanoDeMarketingRouteImport } from './routes/_authenticated/plano-de-marketing'
 import { Route as AuthenticatedRelatoriosRouteImport } from './routes/_authenticated/relatorios'
 import { Route as DTokenRouteImport } from './routes/d.$token'
 import { Route as RTokenRouteImport } from './routes/r.$token'
@@ -92,6 +93,12 @@ const AuthenticatedPlanoDeAcaoRoute =
     path: '/plano-de-acao',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedPlanoDeMarketingRoute =
+  AuthenticatedPlanoDeMarketingRouteImport.update({
+    id: '/plano-de-marketing',
+    path: '/plano-de-marketing',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedRelatoriosRoute = AuthenticatedRelatoriosRouteImport.update({
   id: '/relatorios',
   path: '/relatorios',
@@ -120,9 +127,9 @@ const AuthenticatedDiagnosticosIdRoute =
   } as any)
 const AuthenticatedPlanoDeMarketingClientIdRoute =
   AuthenticatedPlanoDeMarketingClientIdRouteImport.update({
-    id: '/plano-de-marketing/$clientId',
-    path: '/plano-de-marketing/$clientId',
-    getParentRoute: () => AuthenticatedRouteRoute,
+    id: '/$clientId',
+    path: '/$clientId',
+    getParentRoute: () => AuthenticatedPlanoDeMarketingRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -137,6 +144,7 @@ export interface FileRoutesByFullPath {
   '/matriz': typeof AuthenticatedMatrizRoute
   '/performance': typeof AuthenticatedPerformanceRoute
   '/plano-de-acao': typeof AuthenticatedPlanoDeAcaoRoute
+  '/plano-de-marketing': typeof AuthenticatedPlanoDeMarketingRouteWithChildren
   '/relatorios': typeof AuthenticatedRelatoriosRoute
   '/d/$token': typeof DTokenRoute
   '/r/$token': typeof RTokenRoute
@@ -156,6 +164,7 @@ export interface FileRoutesByTo {
   '/matriz': typeof AuthenticatedMatrizRoute
   '/performance': typeof AuthenticatedPerformanceRoute
   '/plano-de-acao': typeof AuthenticatedPlanoDeAcaoRoute
+  '/plano-de-marketing': typeof AuthenticatedPlanoDeMarketingRouteWithChildren
   '/relatorios': typeof AuthenticatedRelatoriosRoute
   '/d/$token': typeof DTokenRoute
   '/r/$token': typeof RTokenRoute
@@ -177,6 +186,7 @@ export interface FileRoutesById {
   '/_authenticated/matriz': typeof AuthenticatedMatrizRoute
   '/_authenticated/performance': typeof AuthenticatedPerformanceRoute
   '/_authenticated/plano-de-acao': typeof AuthenticatedPlanoDeAcaoRoute
+  '/_authenticated/plano-de-marketing': typeof AuthenticatedPlanoDeMarketingRouteWithChildren
   '/_authenticated/relatorios': typeof AuthenticatedRelatoriosRoute
   '/d/$token': typeof DTokenRoute
   '/r/$token': typeof RTokenRoute
@@ -198,6 +208,7 @@ export interface FileRouteTypes {
     | '/matriz'
     | '/performance'
     | '/plano-de-acao'
+    | '/plano-de-marketing'
     | '/relatorios'
     | '/d/$token'
     | '/r/$token'
@@ -217,6 +228,7 @@ export interface FileRouteTypes {
     | '/matriz'
     | '/performance'
     | '/plano-de-acao'
+    | '/plano-de-marketing'
     | '/relatorios'
     | '/d/$token'
     | '/r/$token'
@@ -237,6 +249,7 @@ export interface FileRouteTypes {
     | '/_authenticated/matriz'
     | '/_authenticated/performance'
     | '/_authenticated/plano-de-acao'
+    | '/_authenticated/plano-de-marketing'
     | '/_authenticated/relatorios'
     | '/d/$token'
     | '/r/$token'
@@ -340,6 +353,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPlanoDeAcaoRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/plano-de-marketing': {
+      id: '/_authenticated/plano-de-marketing'
+      path: '/plano-de-marketing'
+      fullPath: '/plano-de-marketing'
+      preLoaderRoute: typeof AuthenticatedPlanoDeMarketingRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/relatorios': {
       id: '/_authenticated/relatorios'
       path: '/relatorios'
@@ -377,10 +397,10 @@ declare module '@tanstack/react-router' {
     }
     '/_authenticated/plano-de-marketing/$clientId': {
       id: '/_authenticated/plano-de-marketing/$clientId'
-      path: '/plano-de-marketing/$clientId'
+      path: '/$clientId'
       fullPath: '/plano-de-marketing/$clientId'
       preLoaderRoute: typeof AuthenticatedPlanoDeMarketingClientIdRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      parentRoute: typeof AuthenticatedPlanoDeMarketingRoute
     }
   }
 }
@@ -412,6 +432,21 @@ const AuthenticatedDiagnosticosRouteWithChildren =
     AuthenticatedDiagnosticosRouteChildren,
   )
 
+interface AuthenticatedPlanoDeMarketingRouteChildren {
+  AuthenticatedPlanoDeMarketingClientIdRoute: typeof AuthenticatedPlanoDeMarketingClientIdRoute
+}
+
+const AuthenticatedPlanoDeMarketingRouteChildren: AuthenticatedPlanoDeMarketingRouteChildren =
+  {
+    AuthenticatedPlanoDeMarketingClientIdRoute:
+      AuthenticatedPlanoDeMarketingClientIdRoute,
+  }
+
+const AuthenticatedPlanoDeMarketingRouteWithChildren =
+  AuthenticatedPlanoDeMarketingRoute._addFileChildren(
+    AuthenticatedPlanoDeMarketingRouteChildren,
+  )
+
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedClientesRoute: typeof AuthenticatedClientesRouteWithChildren
   AuthenticatedConfiguracoesRoute: typeof AuthenticatedConfiguracoesRoute
@@ -421,8 +456,8 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedMatrizRoute: typeof AuthenticatedMatrizRoute
   AuthenticatedPerformanceRoute: typeof AuthenticatedPerformanceRoute
   AuthenticatedPlanoDeAcaoRoute: typeof AuthenticatedPlanoDeAcaoRoute
+  AuthenticatedPlanoDeMarketingRoute: typeof AuthenticatedPlanoDeMarketingRouteWithChildren
   AuthenticatedRelatoriosRoute: typeof AuthenticatedRelatoriosRoute
-  AuthenticatedPlanoDeMarketingClientIdRoute: typeof AuthenticatedPlanoDeMarketingClientIdRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -434,9 +469,9 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedMatrizRoute: AuthenticatedMatrizRoute,
   AuthenticatedPerformanceRoute: AuthenticatedPerformanceRoute,
   AuthenticatedPlanoDeAcaoRoute: AuthenticatedPlanoDeAcaoRoute,
+  AuthenticatedPlanoDeMarketingRoute:
+    AuthenticatedPlanoDeMarketingRouteWithChildren,
   AuthenticatedRelatoriosRoute: AuthenticatedRelatoriosRoute,
-  AuthenticatedPlanoDeMarketingClientIdRoute:
-    AuthenticatedPlanoDeMarketingClientIdRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =

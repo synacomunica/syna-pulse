@@ -1,3 +1,5 @@
+import { PlanOperations } from "@/components/marketing-plan-operations";
+import { generateMarketingPlan } from "@/lib/marketing-plan.functions";
 import { useState } from "react";
 import { createFileRoute, Link, useBlocker } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -22,6 +24,36 @@ function MarketingPlanPage() {
   const { diagnosticId } = Route.useSearch();
   const [selectedId, setSelectedId] = useState<string>();
   const [dirty, setDirty] = useState(false);
+  const [sourceId, setSourceId] = useState(diagnosticId ?? "");
+  const [compareId, setCompareId] = useState("");
+  const qc = useQueryClient();
+  const diagnostics = useQuery({
+    queryKey: ["plan-diagnostics", clientId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("diagnostics")
+        .select("id,title,status,created_at")
+        .eq("client_id", clientId)
+        .eq("status", "validado")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+  const generation = useMutation({
+    mutationFn: async () => {
+      if (dirty) throw new Error("Salve suas alterações antes de gerar outra versão.");
+      const id = sourceId || diagnostics.data?.[0]?.id;
+      if (!id) throw new Error("Valide um diagnóstico antes de gerar o plano.");
+      return generateMarketingPlan({ data: { diagnosticId: id } });
+    },
+    onSuccess: async (plan) => {
+      setSelectedId(plan.id);
+      await qc.invalidateQueries({ queryKey: ["marketing-plans", clientId] });
+      toast.success("Rascunho criado. Revise antes de aprovar.");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
   useBlocker({
     shouldBlockFn: () => {
       if (!dirty) return false;
@@ -80,6 +112,34 @@ function MarketingPlanPage() {
         </div>
       }
     >
+      <section className="surface-card mb-5 flex flex-wrap items-center gap-3 p-4">
+        <label>
+          Diagnóstico validado
+          <select
+            className="input-base"
+            value={sourceId || diagnostics.data?.[0]?.id || ""}
+            onChange={(e) => setSourceId(e.target.value)}
+          >
+            {!diagnostics.data?.length && <option value="">Nenhum diagnóstico validado</option>}
+            {diagnostics.data?.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.title || formatDate(d.created_at)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button
+          className="btn-primary"
+          disabled={generation.isPending || dirty || !diagnostics.data?.length}
+          onClick={() => generation.mutate()}
+        >
+          {generation.isPending ? "Gerando plano…" : "Gerar Plano de Marketing"}
+        </button>
+        <p className="text-sm text-muted-foreground">
+          Cada geração cria uma nova versão. As versões anteriores são preservadas.
+        </p>
+        {diagnostics.isError && <p role="alert">{diagnostics.error.message}</p>}
+      </section>
       {query.isPending ? (
         <p className="text-sm text-muted-foreground">Carregando planos...</p>
       ) : query.isError ? (
@@ -129,7 +189,60 @@ function MarketingPlanPage() {
             </div>
           </aside>
           {selected && (
-            <PlanEditor key={selected.id} plan={selected} dirty={dirty} setDirty={setDirty} />
+            <div className="min-w-0 space-y-4">
+              <label className="block">
+                Comparar com
+                <select
+                  className="input-base"
+                  value={compareId}
+                  onChange={(e) => setCompareId(e.target.value)}
+                >
+                  <option value="">Escolher versão</option>
+                  {query.data.plans
+                    .filter((p) => p.id !== selected.id)
+                    .map((p) => (
+                      <option key={p.id} value={p.id}>
+                        Versão {p.version}
+                      </option>
+                    ))}
+                </select>
+              </label>
+              {compareId && query.data.plans.find((p) => p.id === compareId) && (
+                <div className="surface-card p-4">
+                  <h2 className="font-bold">Comparação estratégica</h2>
+                  {[
+                    "diagnostico_partida",
+                    "objetivo_principal",
+                    "estrategia_central",
+                    "kpis",
+                    "aprendizados",
+                  ].map((key) => {
+                    const previous = query.data.plans.find((p) => p.id === compareId)
+                      ?.content as Record<string, Json>;
+                    const current = selected.content as Record<string, Json>;
+                    return (
+                      <details key={key}>
+                        <summary>
+                          {key.replaceAll("_", " ")} ·{" "}
+                          {JSON.stringify(previous[key]) === JSON.stringify(current[key])
+                            ? "Sem alteração"
+                            : "Alterado"}
+                        </summary>
+                        <div className="grid gap-4 md:grid-cols-2">
+                          <pre className="whitespace-pre-wrap text-xs">
+                            {JSON.stringify(previous[key], null, 2)}
+                          </pre>
+                          <pre className="whitespace-pre-wrap text-xs">
+                            {JSON.stringify(current[key], null, 2)}
+                          </pre>
+                        </div>
+                      </details>
+                    );
+                  })}
+                </div>
+              )}
+              <PlanEditor key={selected.id} plan={selected} dirty={dirty} setDirty={setDirty} />
+            </div>
           )}
         </div>
       )}
@@ -159,6 +272,17 @@ function PlanEditor({
       if (!draft || plan.status !== "rascunho_ia")
         throw new Error("Somente rascunhos válidos podem ser alterados.");
       const content = parseMarketingPlan(draft);
+      if (
+        approve &&
+        (!content.resumo_estrategico.trim() ||
+          !content.objetivo_principal.descricao.trim() ||
+          !content.estrategia_central.trim() ||
+          !content.acoes.length ||
+          content.acoes.some((a) => !a.objetivo.trim() || !a.estrategia.trim() || !a.kpi.trim()))
+      )
+        throw new Error(
+          "Complete o resumo, objetivo, estratégia e ações com objetivo, estratégia e KPI antes de aprovar.",
+        );
       const { data, error } = await supabase
         .from("marketing_plans")
         .update({
@@ -255,7 +379,7 @@ function PlanEditor({
                   mutation.mutate(true);
               }}
             >
-              Aprovar plano
+              Validar Plano de Marketing
             </button>
             {dirty && (
               <p className="w-full text-sm text-muted-foreground">
@@ -272,6 +396,7 @@ function PlanEditor({
           <p className="mt-1 whitespace-pre-wrap text-sm">{plan.ai_warning}</p>
         </section>
       )}
+      {draft && <PlanOperations plan={plan} content={draft} dirty={dirty} />}
       {draft ? (
         <fieldset disabled={mutation.isPending}>
           <MarketingPlanContentView

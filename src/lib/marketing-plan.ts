@@ -112,14 +112,14 @@ export interface MarketingPlanContent {
   subdimensoes: {
     pilar: string;
     nome: string;
-    nota: number;
+    nota: number | null;
     problema: string;
     evidencia: string;
     oportunidade: string;
   }[];
   jornada_5a: {
     etapa: string;
-    nota: number;
+    nota: number | null;
     diagnostico: string;
     problemas: string[];
     evidencias: string[];
@@ -148,6 +148,7 @@ export interface MarketingPlanContent {
   cronograma: { periodo: string; foco: string; acoes: string[] }[];
   plano_90_dias: { fase: string; objetivo: string; acoes: string[] }[];
   funil: { etapa: string; valor: number | null }[];
+  funil_contexto: { periodo: string; populacao: string; verificado: boolean };
   par_bar: { par: number | null; bar: number | null; observacao: string };
   riscos: string[];
   alertas: { titulo: string; motivo: string; recomendacao: string }[];
