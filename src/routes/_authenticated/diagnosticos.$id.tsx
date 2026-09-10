@@ -40,20 +40,26 @@ function DiagnosticDetail() {
   const navigate = useNavigate();
   const { isAdmin } = useAuth();
 
-  const { data, isLoading } = useQuery({
+  const {
+    data,
+    isLoading,
+    error: loadError,
+  } = useQuery({
     queryKey: ["diagnostic", id],
     queryFn: async () => {
-      const { data: diag } = await supabase
+      const { data: diag, error } = await supabase
         .from("diagnostics")
         .select("*")
         .eq("id", id)
         .maybeSingle();
+      if (error) throw error;
       if (!diag) return null;
       const [client, scores, answers] = await Promise.all([
         supabase.from("clients").select("*").eq("id", diag.client_id).maybeSingle(),
         supabase.from("pillar_scores").select("*").eq("diagnostic_id", id),
         supabase.from("answers").select("question_key, value").eq("diagnostic_id", id),
       ]);
+      for (const result of [client, scores, answers]) if (result.error) throw result.error;
       const answerMap: Record<string, unknown> = {};
       for (const a of answers.data ?? []) answerMap[a.question_key] = a.value;
       return {
@@ -77,16 +83,28 @@ function DiagnosticDetail() {
 
   const validate = useMutation({
     mutationFn: async () => {
-      const { data: u } = await supabase.auth.getUser();
-      const { error } = await supabase
+      if (
+        !data?.diag.submitted_at ||
+        !data.diag.analyzed_at ||
+        !FOUR_PS.every((p) =>
+          data.scores.some((s) => s.pillar === p && (s.final_score ?? s.auto_score) != null),
+        )
+      )
+        throw new Error("Conclua o formulário e a análise dos quatro Ps antes de validar.");
+      const { data: u, error: authError } = await supabase.auth.getUser();
+      if (authError || !u.user) throw new Error("Sua sessão expirou. Entre novamente.");
+      const { data: updated, error } = await supabase
         .from("diagnostics")
         .update({
           status: "validado",
           validated_at: new Date().toISOString(),
           validated_by: u.user?.id ?? null,
         })
-        .eq("id", id);
+        .eq("id", id)
+        .select("id")
+        .single();
       if (error) throw error;
+      if (!updated) throw new Error("Não foi possível validar o diagnóstico.");
       if (data?.diag.client_id) {
         await supabase
           .from("clients")
@@ -95,8 +113,10 @@ function DiagnosticDetail() {
       }
     },
     onSuccess: () => {
-      toast.success("Diagnóstico validado.");
+      toast.success("Diagnóstico validado. Você já pode gerar o plano de marketing.");
       void qc.invalidateQueries({ queryKey: ["diagnostic", id] });
+      void qc.invalidateQueries({ queryKey: ["diagnostics"] });
+      void qc.invalidateQueries({ queryKey: ["plan-diagnostics"] });
     },
   });
 
@@ -143,6 +163,12 @@ function DiagnosticDetail() {
       </AppShell>
     );
   }
+  if (loadError)
+    return (
+      <AppShell title="Diagnóstico">
+        <p role="alert">{loadError.message}</p>
+      </AppShell>
+    );
   if (!data) {
     return (
       <AppShell title="Diagnóstico">
@@ -172,7 +198,7 @@ function DiagnosticDetail() {
             params={{ clientId: diag.client_id }}
             search={{ diagnosticId: id }}
           >
-            Plano de Marketing
+            {diag.status === "validado" ? "Gerar Plano de Marketing" : "Plano de Marketing"}
           </Link>
           <button
             className="btn-ghost"
@@ -202,8 +228,13 @@ function DiagnosticDetail() {
               <Copy className="h-4 w-4" /> Link do relatório
             </button>
           ) : (
-            <button className="btn-primary" onClick={() => validate.mutate()}>
-              <CheckCircle2 className="h-4 w-4" /> Validar
+            <button
+              className="btn-primary"
+              disabled={validate.isPending}
+              onClick={() => validate.mutate()}
+            >
+              <CheckCircle2 className="h-4 w-4" />{" "}
+              {validate.isPending ? "Validando…" : "Validar diagnóstico"}
             </button>
           )}
           {isAdmin ? (
@@ -221,6 +252,15 @@ function DiagnosticDetail() {
         </div>
       }
     >
+      {validate.isError && (
+        <p role="alert" className="mb-4 text-destructive">
+          {validate.error.message}
+        </p>
+      )}
+      <p className="mb-4 text-sm text-muted-foreground">
+        Revise as respostas e ajuste as notas na aba Matriz 4P. Depois, valide o diagnóstico para
+        liberar o Plano de Marketing.
+      </p>
       <div className="flex gap-1 border-b border-border">
         {(
           [

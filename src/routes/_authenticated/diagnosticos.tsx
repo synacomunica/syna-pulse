@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useLocation } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Copy } from "lucide-react";
 import { toast } from "sonner";
@@ -21,8 +21,13 @@ export const Route = createFileRoute("/_authenticated/diagnosticos")({
       { property: "og:description", content: "Diagnósticos 4P + Performance da carteira Syna." },
     ],
   }),
-  component: DiagnosticsPage,
+  component: DiagnosticsRoute,
 });
+
+function DiagnosticsRoute() {
+  const pathname = useLocation({ select: (location) => location.pathname });
+  return pathname.replace(/\/$/, "") === "/diagnosticos" ? <DiagnosticsPage /> : <Outlet />;
+}
 
 function DiagnosticsPage() {
   const [status, setStatus] = useState("");
