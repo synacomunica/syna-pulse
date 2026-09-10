@@ -226,28 +226,36 @@ const SCHEMA = {
 async function callAi(
   prompt: string,
 ): Promise<{ result: AnalysisResult | null; error: string | null }> {
-  const apiKey = process.env["LOVABLE_API_KEY"];
+  const geminiKey = process.env["GEMINI_API_KEY"]?.trim();
+  const apiKey = geminiKey || process.env["LOVABLE_API_KEY"];
   if (!apiKey) return { result: null, error: "Chave de IA não configurada." };
 
-  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-      "X-Lovable-AIG-SDK": "fetch",
-    },
-    body: JSON.stringify({
-      model: "google/gemini-3.7-flash",
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: prompt },
-      ],
-      response_format: {
-        type: "json_schema",
-        json_schema: { name: "diagnostico", strict: true, schema: SCHEMA },
+  const res = await fetch(
+    geminiKey
+      ? "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+      : "https://ai.gateway.lovable.dev/v1/chat/completions",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+        "X-Lovable-AIG-SDK": "fetch",
       },
-    }),
-  });
+      body: JSON.stringify({
+        model: geminiKey
+          ? process.env["GEMINI_MODEL"] || "gemini-3.5-flash"
+          : "google/gemini-3.7-flash",
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: prompt },
+        ],
+        response_format: {
+          type: "json_schema",
+          json_schema: { name: "diagnostico", strict: true, schema: SCHEMA },
+        },
+      }),
+    },
+  );
 
   if (!res.ok) {
     const body = await res.text();

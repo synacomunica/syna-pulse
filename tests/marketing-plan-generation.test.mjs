@@ -99,3 +99,51 @@ test("missing AI key preserves facts and leaves unknown metrics null", async () 
     if (previous !== undefined) process.env.LOVABLE_API_KEY = previous;
   }
 });
+
+test("Gemini key selects Google endpoint and parses a strategic plan", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalKey = process.env.GEMINI_API_KEY;
+  process.env.GEMINI_API_KEY = "test-gemini-key";
+  let called = false;
+  globalThis.fetch = async (url, options) => {
+    called = true;
+    assert.equal(url, "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions");
+    assert.equal(options.headers.Authorization, "Bearer test-gemini-key");
+    const body = JSON.parse(options.body);
+    assert.equal(body.response_format.type, "json_object");
+    return new Response(
+      JSON.stringify({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                estrategia_central: "Resolver conversão",
+                objetivo_principal: { descricao: "Melhorar conversão" },
+                acoes: [
+                  {
+                    titulo: "Revisar atendimento",
+                    objetivo: "Melhorar conversão",
+                    estrategia: "Resolver conversão",
+                    kpi: "conversao",
+                  },
+                ],
+              }),
+            },
+          },
+        ],
+      }),
+      { status: 200 },
+    );
+  };
+  try {
+    const db = database("validado");
+    await generatePlan(db, "diagnostic");
+    assert.ok(called);
+    assert.equal(db.inserted[0].content.estrategia_central, "Resolver conversão");
+    assert.match(db.inserted[0].ai_warning, /gerado por IA/);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalKey === undefined) delete process.env.GEMINI_API_KEY;
+    else process.env.GEMINI_API_KEY = originalKey;
+  }
+});
