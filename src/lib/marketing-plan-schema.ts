@@ -19,6 +19,14 @@ const objective = object({
 });
 export const marketingPlanSchema = object({
   resumo_estrategico: text,
+  notas_4p: list(object({ pilar: text, nota: z.number().min(0).max(10).nullable().default(null) })),
+  canais: list(
+    object({ canal: text, objetivo: text, estrategia: text, etapa: text, justificativa: text }),
+  ),
+  conteudo_comunicacao: object({ mensagem_central: text, temas: texts, provas: texts }),
+  aquisicao: text,
+  conversao: text,
+  retencao_advocacia: text,
   publico_estrategico: text,
   diagnostico_partida: object({
     gargalo_pilar: text,
@@ -110,6 +118,12 @@ export function parseMarketingPlan(value: unknown): MarketingPlanContent {
 
 export const PLAN_SECTION_LABELS: Record<keyof MarketingPlanContent, string> = {
   resumo_estrategico: "Resumo estratégico",
+  notas_4p: "Notas do diagnóstico 4P",
+  canais: "Canais e justificativas estratégicas",
+  conteudo_comunicacao: "Conteúdo e comunicação",
+  aquisicao: "Aquisição",
+  conversao: "Conversão",
+  retencao_advocacia: "Retenção e advocacia",
   publico_estrategico: "Público estratégico",
   diagnostico_partida: "Diagnóstico de partida",
   subdimensoes: "Subdimensões",

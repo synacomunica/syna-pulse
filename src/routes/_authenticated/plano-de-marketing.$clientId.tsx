@@ -34,7 +34,6 @@ function MarketingPlanPage() {
         .from("diagnostics")
         .select("id,title,status,created_at")
         .eq("client_id", clientId)
-        .eq("status", "validado")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
@@ -43,7 +42,7 @@ function MarketingPlanPage() {
   const generation = useMutation({
     mutationFn: async () => {
       if (dirty) throw new Error("Salve suas alterações antes de gerar outra versão.");
-      const id = sourceId || diagnostics.data?.[0]?.id;
+      const id = sourceId || diagnostics.data?.find((d) => d.status === "validado")?.id;
       if (!id) throw new Error("Valide um diagnóstico antes de gerar o plano.");
       return generateMarketingPlan({ data: { diagnosticId: id } });
     },
@@ -117,20 +116,26 @@ function MarketingPlanPage() {
           Diagnóstico validado
           <select
             className="input-base"
-            value={sourceId || diagnostics.data?.[0]?.id || ""}
+            value={sourceId || diagnostics.data?.find((d) => d.status === "validado")?.id || ""}
             onChange={(e) => setSourceId(e.target.value)}
           >
-            {!diagnostics.data?.length && <option value="">Nenhum diagnóstico validado</option>}
-            {diagnostics.data?.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.title || formatDate(d.created_at)}
-              </option>
-            ))}
+            {!diagnostics.data?.some((d) => d.status === "validado") && (
+              <option value="">Nenhum diagnóstico validado</option>
+            )}
+            {diagnostics.data
+              ?.filter((d) => d.status === "validado")
+              .map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.title || formatDate(d.created_at)}
+                </option>
+              ))}
           </select>
         </label>
         <button
           className="btn-primary"
-          disabled={generation.isPending || dirty || !diagnostics.data?.length}
+          disabled={
+            generation.isPending || dirty || !diagnostics.data?.some((d) => d.status === "validado")
+          }
           onClick={() => generation.mutate()}
         >
           {generation.isPending ? "Gerando plano…" : "Gerar Plano de Marketing"}
@@ -138,6 +143,13 @@ function MarketingPlanPage() {
         <p className="text-sm text-muted-foreground">
           Cada geração cria uma nova versão. As versões anteriores são preservadas.
         </p>
+        {diagnostics.data
+          ?.filter((d) => d.status !== "validado")
+          .map((d) => (
+            <Link key={d.id} className="btn-ghost" to="/diagnosticos/$id" params={{ id: d.id }}>
+              Revisar diagnóstico {d.title || formatDate(d.created_at)} →
+            </Link>
+          ))}
         {diagnostics.isError && <p role="alert">{diagnostics.error.message}</p>}
       </section>
       {query.isPending ? (
@@ -229,12 +241,14 @@ function MarketingPlanPage() {
                             : "Alterado"}
                         </summary>
                         <div className="grid gap-4 md:grid-cols-2">
-                          <pre className="whitespace-pre-wrap text-xs">
-                            {JSON.stringify(previous[key], null, 2)}
-                          </pre>
-                          <pre className="whitespace-pre-wrap text-xs">
-                            {JSON.stringify(current[key], null, 2)}
-                          </pre>
+                          <div className="rounded border p-3">
+                            <h3 className="font-bold">Versão comparada</h3>
+                            <ComparisonValue value={previous[key]} />
+                          </div>
+                          <div className="rounded border p-3">
+                            <h3 className="font-bold">Versão selecionada</h3>
+                            <ComparisonValue value={current[key]} />
+                          </div>
                         </div>
                       </details>
                     );
@@ -418,4 +432,33 @@ function PlanEditor({
       )}
     </div>
   );
+}
+
+function ComparisonValue({ value }: { value: Json | undefined }) {
+  if (value == null || value === "")
+    return <p className="text-sm text-muted-foreground">Não informado</p>;
+  if (Array.isArray(value))
+    return (
+      <div className="space-y-2">
+        {value.map((item, index) => (
+          <div key={index} className="border-b py-2">
+            <ComparisonValue value={item} />
+          </div>
+        ))}
+      </div>
+    );
+  if (typeof value === "object")
+    return (
+      <dl className="space-y-2">
+        {Object.entries(value).map(([key, item]) => (
+          <div key={key}>
+            <dt className="text-sm font-medium">{key.replaceAll("_", " ")}</dt>
+            <dd>
+              <ComparisonValue value={item} />
+            </dd>
+          </div>
+        ))}
+      </dl>
+    );
+  return <p className="whitespace-pre-wrap text-sm">{String(value)}</p>;
 }

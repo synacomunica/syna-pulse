@@ -46,8 +46,29 @@ export async function generatePlan(db: SupabaseClient<Database>, diagnosticId: s
   const [client, answers, scores, metrics, goals, history, actions] = results;
   if (!answers.data?.length || !scores.data?.length)
     throw new Error("O diagnóstico precisa de respostas e notas revisadas.");
+  const dimensions = {
+    produto:
+      "Proposta de valor;Diferenciação;Adequação ao mercado;Qualidade percebida;Experiência;Recompra;Indicação;Oferta;Portfólio",
+    preco:
+      "Competitividade;Percepção de valor;Margem;Ticket;Modelo de cobrança;Sensibilidade ao preço;Concorrentes",
+    praca:
+      "Acessibilidade;Localização;Canais de venda;Atendimento;Processo comercial;Disponibilidade;Capacidade operacional;Facilidade de compra",
+    promocao:
+      "Posicionamento;Mensagem;Reconhecimento;Conteúdo;Mídia;Autoridade;Prova social;Geração de demanda;Aquisição;Comunicação",
+  };
   const template = parseMarketingPlan({
+    subdimensoes: Object.entries(dimensions).flatMap(([pilar, names]) =>
+      names.split(";").map((nome) => ({
+        pilar,
+        nome,
+        nota: null,
+        evidencia: "Dados insuficientes; revisar respostas do cliente.",
+      })),
+    ),
     resumo_estrategico: diagnostic.executive_summary ?? "",
+    notas_4p: scores.data
+      .filter((s) => s.pillar !== "performance")
+      .map((s) => ({ pilar: s.pillar, nota: s.final_score ?? s.auto_score })),
     diagnostico_partida: {
       gargalo_pilar: diagnostic.main_bottleneck ?? "",
       oportunidade: diagnostic.main_opportunity ?? "",
@@ -111,6 +132,7 @@ export async function generatePlan(db: SupabaseClient<Database>, diagnosticId: s
       )
         throw new Error("A IA retornou um plano incompleto.");
       // Ratios and audience counts need independently verified cohorts, not model estimates.
+      content.notas_4p = template.notas_4p;
       content.funil = template.funil;
       content.funil_contexto = template.funil_contexto;
       content.par_bar = template.par_bar;

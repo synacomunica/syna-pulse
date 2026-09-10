@@ -295,6 +295,51 @@ export function PlanOperations({
         <p className="text-sm">{content.par_bar.observacao}</p>
       </section>
       <section className="surface-card space-y-3 p-5">
+        <h2 className="font-bold">Plano tático</h2>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr>
+                {[
+                  "Ação",
+                  "Objetivo",
+                  "Estratégia",
+                  "P",
+                  "5A",
+                  "Responsável",
+                  "Prazo",
+                  "KPI",
+                  "Meta",
+                ].map((label) => (
+                  <th key={label} className="border-b p-2">
+                    {label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {content.acoes.map((action, i) => (
+                <tr key={i}>
+                  {[
+                    action.titulo,
+                    action.objetivo,
+                    action.estrategia,
+                    action.pilar,
+                    action.etapa,
+                    action.responsavel,
+                    action.prazo,
+                    action.kpi,
+                    action.meta,
+                  ].map((value, j) => (
+                    <td key={j} className="border-b p-2 align-top">
+                      {value || "A definir"}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
         <h2 className="font-bold">Execução e cronograma</h2>
         <select
           aria-label="Horizonte do cronograma"

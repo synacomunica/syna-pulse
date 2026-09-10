@@ -2,7 +2,10 @@ import { createFileRoute, Link, Outlet, useLocation } from "@tanstack/react-rout
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/app-shell";
 import { supabase } from "@/integrations/supabase/client";
-export const Route = createFileRoute("/_authenticated/plano-de-marketing")({ component: Plans });
+export const Route = createFileRoute("/_authenticated/plano-de-marketing")({
+  head: () => ({ meta: [{ title: "Planos de Marketing — Syna" }] }),
+  component: Plans,
+});
 function Plans() {
   const location = useLocation();
   const query = useQuery({

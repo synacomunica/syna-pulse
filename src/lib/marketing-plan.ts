@@ -100,6 +100,18 @@ export interface PlanLearning {
 
 export interface MarketingPlanContent {
   resumo_estrategico: string;
+  notas_4p: { pilar: string; nota: number | null }[];
+  canais: {
+    canal: string;
+    objetivo: string;
+    estrategia: string;
+    etapa: string;
+    justificativa: string;
+  }[];
+  conteudo_comunicacao: { mensagem_central: string; temas: string[]; provas: string[] };
+  aquisicao: string;
+  conversao: string;
+  retencao_advocacia: string;
   publico_estrategico: string;
   diagnostico_partida: {
     gargalo_pilar: string;
