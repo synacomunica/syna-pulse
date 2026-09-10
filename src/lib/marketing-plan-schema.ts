@@ -148,3 +148,27 @@ export const PLAN_SECTION_LABELS: Record<keyof MarketingPlanContent, string> = {
   dados_insuficientes: "Dados insuficientes",
   aprendizados: "Aprendizados",
 };
+
+// JSON Schema mirrors the editor schema so model output uses the same field types.
+function aiSchema(schema: z.ZodTypeAny): Record<string, unknown> {
+  if (schema instanceof z.ZodDefault) return aiSchema(schema.removeDefault());
+  if (schema instanceof z.ZodNullable)
+    return { anyOf: [aiSchema(schema.unwrap()), { type: "null" }] };
+  if (schema instanceof z.ZodObject)
+    return {
+      type: "object",
+      additionalProperties: false,
+      properties: Object.fromEntries(
+        Object.entries(schema.shape as Record<string, z.ZodTypeAny>).map(([key, child]) => [
+          key,
+          aiSchema(child),
+        ]),
+      ),
+      required: Object.keys(schema.shape),
+    };
+  if (schema instanceof z.ZodArray) return { type: "array", items: aiSchema(schema.element) };
+  if (schema instanceof z.ZodNumber) return { type: "number" };
+  if (schema instanceof z.ZodBoolean) return { type: "boolean" };
+  return { type: "string" };
+}
+export const marketingPlanAiSchema = aiSchema(marketingPlanSchema);

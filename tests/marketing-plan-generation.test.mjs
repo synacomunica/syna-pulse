@@ -110,7 +110,8 @@ test("Gemini key selects Google endpoint and parses a strategic plan", async () 
     assert.equal(url, "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions");
     assert.equal(options.headers.Authorization, "Bearer test-gemini-key");
     const body = JSON.parse(options.body);
-    assert.equal(body.response_format.type, "json_object");
+    assert.equal(body.response_format.type, "json_schema");
+    assert.ok(body.response_format.json_schema.schema.properties.jornada_5a);
     return new Response(
       JSON.stringify({
         choices: [

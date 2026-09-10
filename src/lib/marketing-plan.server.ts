@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/integrations/supabase/types";
-import { parseMarketingPlan } from "./marketing-plan-schema";
+import { parseMarketingPlan, marketingPlanAiSchema } from "./marketing-plan-schema";
 import { JOURNEY_STAGES } from "./marketing-plan";
 
 export async function generatePlan(db: SupabaseClient<Database>, diagnosticId: string) {
@@ -106,7 +106,10 @@ export async function generatePlan(db: SupabaseClient<Database>, diagnosticId: s
             model: geminiKey
               ? process.env["GEMINI_MODEL"] || "gemini-3.5-flash"
               : "google/gemini-3.7-flash",
-            response_format: { type: "json_object" },
+            response_format: {
+              type: "json_schema",
+              json_schema: { name: "marketing_plan", strict: true, schema: marketingPlanAiSchema },
+            },
             messages: [
               {
                 role: "system",
