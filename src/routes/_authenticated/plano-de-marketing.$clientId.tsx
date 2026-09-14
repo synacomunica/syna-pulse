@@ -1,3 +1,6 @@
+import { useAuth } from "@/hooks/useAuth";
+import { MarketingPlanChannels } from "@/components/marketing-plan-channels";
+import { ContentScheduleGenerator } from "@/components/content-schedule-generator";
 import { PlanOperations } from "@/components/marketing-plan-operations";
 import { generateMarketingPlan } from "@/lib/marketing-plan.functions";
 import { useState } from "react";
@@ -255,7 +258,13 @@ function MarketingPlanPage() {
                   })}
                 </div>
               )}
-              <PlanEditor key={selected.id} plan={selected} dirty={dirty} setDirty={setDirty} />
+              <PlanEditor
+                key={selected.id}
+                plan={selected}
+                dirty={dirty}
+                setDirty={setDirty}
+                onSelect={setSelectedId}
+              />
             </div>
           )}
         </div>
@@ -268,11 +277,14 @@ function PlanEditor({
   plan,
   dirty,
   setDirty,
+  onSelect,
 }: {
+  onSelect: (id: string) => void;
   plan: Tables<"marketing_plans">;
   dirty: boolean;
   setDirty: (value: boolean) => void;
 }) {
+  const { isAdmin } = useAuth();
   const [revision, setRevision] = useState(plan.updated_at);
   const parsed = marketingPlanSchema.safeParse(plan.content);
   const [draft, setDraft] = useState<MarketingPlanContent | null>(() =>
@@ -281,11 +293,52 @@ function PlanEditor({
   const [editing, setEditing] = useState(false);
   const qc = useQueryClient();
   const { user } = Route.useRouteContext();
+  const channelRevision = useMutation({
+    mutationFn: async () => {
+      if (!isAdmin) throw new Error("Acesso de administrador necessário.");
+      const { data: current, error: readError } = await supabase
+        .from("marketing_plans")
+        .select("*")
+        .eq("id", plan.id)
+        .single();
+      if (readError) throw readError;
+      const { data, error } = await supabase
+        .from("marketing_plans")
+        .insert({
+          client_id: current.client_id,
+          diagnostic_id: current.diagnostic_id,
+          content: current.content,
+          ai_warning: current.ai_warning,
+        })
+        .select("id")
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: async (next) => {
+      await qc.invalidateQueries({ queryKey: ["marketing-plans", plan.client_id] });
+      onSelect(next.id);
+      toast.success("Revisão criada. Clique em Gerenciar canais para editar.");
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
   const mutation = useMutation({
     mutationFn: async (approve: boolean) => {
       if (!draft || plan.status !== "rascunho_ia")
         throw new Error("Somente rascunhos válidos podem ser alterados.");
       const content = parseMarketingPlan(draft);
+      if (
+        content.canais.some(
+          (channel) =>
+            !channel.canal.trim() || !channel.objetivo.trim() || !channel.estrategia.trim(),
+        )
+      )
+        throw new Error("Preencha canal, objetivo e estratégia de todos os canais.");
+      if (
+        new Set(content.canais.map((channel) => channel.canal.trim().toLowerCase())).size !==
+        content.canais.length
+      )
+        throw new Error("Há canais repetidos. Mantenha uma entrada por canal.");
       if (
         approve &&
         (!content.resumo_estrategico.trim() ||
@@ -409,6 +462,41 @@ function PlanEditor({
           <h2 className="font-semibold">Aviso da IA</h2>
           <p className="mt-1 whitespace-pre-wrap text-sm">{plan.ai_warning}</p>
         </section>
+      )}
+      {draft && isAdmin && (
+        <>
+          {plan.status === "aprovado" && (
+            <p className="text-sm text-muted-foreground">
+              Gerenciar canais cria um novo rascunho e preserva esta versão aprovada.
+            </p>
+          )}
+          <fieldset disabled={mutation.isPending || channelRevision.isPending}>
+            <MarketingPlanChannels
+              channels={draft.canais}
+              editable={editing && plan.status === "rascunho_ia"}
+              busy={mutation.isPending || channelRevision.isPending}
+              onEdit={() => {
+                if (plan.status === "aprovado") channelRevision.mutate();
+                else setEditing(true);
+              }}
+              onChange={(canais) => {
+                setDraft({ ...draft, canais });
+                setDirty(true);
+              }}
+            />
+            {editing && dirty && (
+              <button className="btn-primary mt-3" onClick={() => mutation.mutate(false)}>
+                Salvar canais e rascunho
+              </button>
+            )}
+          </fieldset>
+          <ContentScheduleGenerator
+            plan={plan}
+            content={draft}
+            dirty={dirty}
+            disabled={mutation.isPending || channelRevision.isPending}
+          />
+        </>
       )}
       {draft && <PlanOperations plan={plan} content={draft} dirty={dirty} />}
       {draft ? (
