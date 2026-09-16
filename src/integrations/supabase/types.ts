@@ -1,3 +1,9 @@
+type NewTable<R, K extends keyof R> = {
+  Row: R;
+  Insert: Pick<R, K> & Partial<R>;
+  Update: Partial<R>;
+  Relationships: [];
+};
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type Database = {
@@ -8,6 +14,55 @@ export type Database = {
   };
   public: {
     Tables: {
+      client_documents: NewTable<
+        {
+          id: string;
+          client_id: string;
+          title: string;
+          kind: string;
+          version: number;
+          replaces_id: string | null;
+          status: string;
+          valid_from: string | null;
+          valid_until: string | null;
+          storage_path: string;
+          processing_status: string;
+          extraction: Json | null;
+          processing_error: string | null;
+          created_by: string;
+          created_at: string;
+          updated_at: string;
+        },
+        "client_id" | "title" | "kind" | "storage_path"
+      >;
+      client_scopes: NewTable<
+        {
+          id: string;
+          client_id: string;
+          version: number;
+          status: string;
+          origin: string;
+          document_ids: string[];
+          content: Json;
+          created_by: string;
+          created_at: string;
+        },
+        "client_id" | "status" | "origin" | "content"
+      >;
+      client_planning_inputs: NewTable<
+        {
+          id: string;
+          client_id: string;
+          kind: string;
+          subject: string;
+          value: string;
+          reference: string;
+          supersedes_id: string | null;
+          created_by: string;
+          created_at: string;
+        },
+        "client_id" | "kind" | "subject" | "value"
+      >;
       action_items: {
         Row: {
           client_id: string;

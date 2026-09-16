@@ -99,6 +99,7 @@ export interface PlanLearning {
 }
 
 export interface MarketingPlanContent {
+  governanca?: import("./planning-policy").Governance | undefined;
   resumo_estrategico: string;
   notas_4p: { pilar: string; nota: number | null }[];
   canais: {

@@ -1,3 +1,4 @@
+import { ClientContracts } from "@/components/client-contracts";
 import { useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -178,6 +179,7 @@ function ClientDetail() {
           </section>
 
           <div className="space-y-6 lg:col-span-2">
+            <ClientContracts clientId={id} />
             <section className="surface-card p-6">
               <h2 className="text-lg font-bold">Diagnósticos</h2>
               <div className="mt-4 divide-y divide-border">

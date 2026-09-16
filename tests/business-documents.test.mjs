@@ -1,18 +1,10 @@
+import { compile } from "./compile.mjs";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
-import ts from "typescript";
 import JSZip from "jszip";
 import { Packer } from "docx";
-function compile(name, imports = {}) {
-  let js = ts.transpileModule(
-    readFileSync(new URL(`../src/lib/${name}.ts`, import.meta.url), "utf8"),
-    { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } },
-  ).outputText;
-  for (const [from, to] of Object.entries(imports))
-    js = js.replaceAll(`"${from}"`, JSON.stringify(to));
-  return `data:text/javascript;base64,${Buffer.from(js).toString("base64")}`;
-}
+
 const schema = compile("marketing-plan-schema", { zod: import.meta.resolve("zod") });
 const modelUrl = compile("documents/model", {
   "../marketing-plan-schema": schema,

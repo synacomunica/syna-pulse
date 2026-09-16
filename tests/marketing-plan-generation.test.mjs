@@ -1,16 +1,8 @@
+import { compile } from "./compile.mjs";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import ts from "typescript";
-function compile(name, imports = {}) {
-  let source = ts.transpileModule(
-    readFileSync(new URL(`../src/lib/${name}.ts`, import.meta.url), "utf8"),
-    { compilerOptions: { module: ts.ModuleKind.ESNext } },
-  ).outputText;
-  for (const [from, to] of Object.entries(imports))
-    source = source.replaceAll(`"${from}"`, JSON.stringify(to));
-  return `data:text/javascript;base64,${Buffer.from(source).toString("base64")}`;
-}
+
 const schema = compile("marketing-plan-schema", { zod: import.meta.resolve("zod") });
 const vocabulary = compile("marketing-plan");
 const { generatePlan } = await import(
@@ -40,6 +32,9 @@ function database(status) {
     goals: [],
     marketing_plans: [],
     action_items: [],
+    client_scopes: [],
+    client_documents: [],
+    client_planning_inputs: [],
   };
   return {
     inserted,

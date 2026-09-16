@@ -33,6 +33,14 @@ export const scheduleSchema = z.object({
   conteudos: z
     .array(
       z.object({
+        publico: text.default("A confirmar"),
+        necessidade: text.default("A confirmar"),
+        evidencia_ids: z.array(z.string()).default([]),
+        destino: text.default("A confirmar"),
+        proximo_passo: text.default("A confirmar"),
+        uso_comercial: text.default("A confirmar"),
+        dependencias_aprovacao: z.array(z.string()).default([]),
+        scopeItemId: z.string().default(""),
         data: date,
         canal: text,
         formato: z.enum(contentFormats),

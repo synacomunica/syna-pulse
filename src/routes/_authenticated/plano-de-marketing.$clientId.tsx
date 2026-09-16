@@ -1,3 +1,5 @@
+import { PlanGovernance } from "@/components/plan-governance";
+import { reviewMarketingPlan } from "@/lib/plan-review.functions";
 import { DocumentExport } from "@/components/document-export";
 import { marketingDocument } from "@/lib/documents/model";
 import { useAuth } from "@/hooks/useAuth";
@@ -294,7 +296,7 @@ function PlanEditor({
   );
   const [editing, setEditing] = useState(false);
   const qc = useQueryClient();
-  const { user } = Route.useRouteContext();
+
   const channelRevision = useMutation({
     mutationFn: async () => {
       if (!isAdmin) throw new Error("Acesso de administrador necessário.");
@@ -304,17 +306,15 @@ function PlanEditor({
         .eq("id", plan.id)
         .single();
       if (readError) throw readError;
-      const { data, error } = await supabase
-        .from("marketing_plans")
-        .insert({
-          client_id: current.client_id,
-          diagnostic_id: current.diagnostic_id,
-          content: current.content,
-          ai_warning: current.ai_warning,
-        })
-        .select("id")
-        .single();
-      if (error) throw error;
+      const data = await reviewMarketingPlan({
+        data: {
+          planId: current.id,
+          revision: current.updated_at,
+          content: parseMarketingPlan(current.content),
+          approve: false,
+          newVersion: true,
+        },
+      });
       return data;
     },
     onSuccess: async (next) => {
@@ -352,25 +352,9 @@ function PlanEditor({
         throw new Error(
           "Complete o resumo, objetivo, estratégia e ações com objetivo, estratégia e KPI antes de aprovar.",
         );
-      const { data, error } = await supabase
-        .from("marketing_plans")
-        .update({
-          content: content as unknown as Json,
-          ...(approve
-            ? { status: "aprovado", approved_by: user.id, approved_at: new Date().toISOString() }
-            : {}),
-        })
-        .eq("id", plan.id)
-        .eq("client_id", plan.client_id)
-        .eq("status", "rascunho_ia")
-        .eq("updated_at", revision)
-        .select("updated_at")
-        .maybeSingle();
-      if (error) throw error;
-      if (!data)
-        throw new Error(
-          "O plano foi alterado por outra pessoa. Recarregue a página antes de tentar novamente.",
-        );
+      const data = await reviewMarketingPlan({
+        data: { planId: plan.id, revision, content, approve, newVersion: false },
+      });
       return data.updated_at;
     },
     onSuccess: async (updatedAt, approve) => {
@@ -384,6 +368,7 @@ function PlanEditor({
   });
   return (
     <div className="min-w-0 space-y-5" data-plan-dirty={dirty}>
+      {draft && <PlanGovernance plan={plan} content={draft} dirty={dirty} onSelect={onSelect} />}
       <section className="surface-card p-5">
         <h2 className="text-lg font-bold">
           Versão {plan.version} · {PLAN_STATUS_LABEL[plan.status] ?? plan.status}
@@ -484,7 +469,7 @@ function PlanEditor({
                   mutation.mutate(true);
               }}
             >
-              Validar Plano de Marketing
+              Aprovar para execução
             </button>
             {dirty && (
               <p className="w-full text-sm text-muted-foreground">

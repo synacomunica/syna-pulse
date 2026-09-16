@@ -1,16 +1,8 @@
+import { compile } from "./compile.mjs";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, writeFileSync } from "node:fs";
-import ts from "typescript";
-function compile(name, imports = {}) {
-  let source = ts.transpileModule(
-    readFileSync(new URL(`../src/lib/${name}.ts`, import.meta.url), "utf8"),
-    { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } },
-  ).outputText;
-  for (const [from, to] of Object.entries(imports))
-    source = source.replaceAll(`"${from}"`, JSON.stringify(to));
-  return `data:text/javascript;base64,${Buffer.from(source).toString("base64")}`;
-}
+
 const planSchema = compile("marketing-plan-schema", { zod: import.meta.resolve("zod") });
 const schema = compile("content-schedule", {
   zod: import.meta.resolve("zod"),
@@ -145,12 +137,21 @@ function database({ admin = true, stale = false, changed = false } = {}) {
         eq() {
           return q;
         },
+        order() {
+          return q;
+        },
+        limit() {
+          return q;
+        },
         single() {
           return q;
         },
         then(resolve) {
-          const data =
-            table === "user_roles"
+          const data = ["client_scopes", "client_documents", "client_planning_inputs"].includes(
+            table,
+          )
+            ? []
+            : table === "user_roles"
               ? [{ role: admin ? "admin" : "equipe" }]
               : table === "clients"
                 ? { company_name: "Demonstração" }

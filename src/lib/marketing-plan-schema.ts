@@ -1,3 +1,4 @@
+import { governanceSchema } from "./planning-policy";
 import { z } from "zod";
 import type { MarketingPlanContent } from "./marketing-plan";
 
@@ -18,6 +19,7 @@ const objective = object({
   prazo: text,
 });
 export const marketingPlanSchema = object({
+  governanca: governanceSchema.optional(),
   resumo_estrategico: text,
   notas_4p: list(object({ pilar: text, nota: z.number().min(0).max(10).nullable().default(null) })),
   canais: list(
@@ -117,6 +119,7 @@ export function parseMarketingPlan(value: unknown): MarketingPlanContent {
 }
 
 export const PLAN_SECTION_LABELS: Record<keyof MarketingPlanContent, string> = {
+  governanca: "Fundamentos, escopo e validações",
   resumo_estrategico: "Resumo estratégico",
   notas_4p: "Notas do diagnóstico 4P",
   canais: "Canais e justificativas estratégicas",
@@ -151,6 +154,7 @@ export const PLAN_SECTION_LABELS: Record<keyof MarketingPlanContent, string> = {
 
 // JSON Schema mirrors the editor schema so model output uses the same field types.
 export function aiSchema(schema: z.ZodTypeAny): Record<string, unknown> {
+  if (schema instanceof z.ZodOptional) return aiSchema(schema.unwrap());
   if (schema instanceof z.ZodDefault) return aiSchema(schema.removeDefault());
   if (schema instanceof z.ZodNullable)
     return { anyOf: [aiSchema(schema.unwrap()), { type: "null" }] };

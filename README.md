@@ -67,3 +67,19 @@ A apresentação adota a NBR 10719 para relatórios técnicos: A4, margens super
 No Word, atualize o campo do sumário após abrir ou editar para preencher os números de página. Ao converter no Google Docs, atualize ou reinsira o sumário a partir dos títulos importados. O PDF já contém o sumário paginado. A paginação pode variar entre editores.
 
 Validação: `node --test tests/*.test.mjs`, `npx tsc --noEmit`, `npm run lint` e `NITRO_PRESET=vercel npm run build`. Os testes de documentos verificam conteúdo, ausência de tokens privados, formatação DOCX e geração real de PDF.
+
+### Planejamento fundamentado e contratos (regras 2026-09-16.1)
+
+A geração (`marketing-plan.server.ts`), revisão/aprovação (`plan-review.functions.ts`) e cronogramas (`content-schedule.server.ts`) compartilham `planning-policy.ts`, catálogo de fontes e o escopo vigente. Não há gerador em segundo plano neste repositório. Planos anteriores permanecem legíveis; revalidação cria versão e nunca atualiza conteúdo aprovado. A revisão conserva o texto e identifica as referências/ações impactadas para decisão humana.
+
+Em **Cliente → Contrato e escopo**, envie PDF de até 10 MB, marque a situação/vigência, confira cada item e confirme uma nova versão de escopo. Aditivos são incorporados explicitamente; cláusulas divergentes exigem resolução. Honorários, mídia, limites máximos e relações de contagem são campos independentes. Alterações no resumo são esclarecimentos, não alterações jurídicas do arquivo. Escopos manuais e extrações provisórias possuem origem distinta.
+
+Arquivos são privados no bucket `client-contracts`; leitura/escrita exige administrador, responsável ou criador do cliente. A mesma restrição protege novos planos contendo referências contratuais. Arquivos e versões de escopo não têm permissão de sobrescrita/exclusão. A extração multimodal usa `GEMINI_API_KEY` no servidor e o PDF como dados, nunca como instruções. Trechos/páginas são sugestões da extração e exigem conferência humana, especialmente em digitalizações. Em falha há alternativa manual. Referência técnica: https://ai.google.dev/gemini-api/docs/generate-content/document-processing
+
+Aplicar `supabase/migrations/20260916100000_contract_scope.sql` antes de publicar esta versão. A migração é aditiva, sem atualização de planos existentes. Em produção foi aplicada pelo SQL Editor do Lovable, com comparação de contagem e checksum dos planos antes/depois. O banco rejeita aprovação sem governança/revisão atual; aprovação nunca ocorre automaticamente.
+
+Verificações por código: integridade das referências, pendências e estados, ordem/ciclos de dependências, datas, janelas de produção/aprovação, vigência, quantidades comparáveis, vídeos dentro do total, responsabilidade do cliente, escopo confirmado/substituído, contas de receita mensal de cenários, funil monotônico, capacidade e ciclo de venda. Campos ausentes permanecem desconhecidos. Texto sensível reconhecido por padrões recebe pendência; essa detecção não cobre toda linguagem natural.
+
+Dependem da IA e da conferência humana: extração e correspondência semântica de trechos, relevância das evidências, conflitos em respostas livres, hipóteses causais, escolha de público/canais e adequação das mensagens. Não há navegação externa na geração: o sistema não afirma verificação jurídica ou de mercado atual. Períodos de contrato que não possam ser comparados com segurança exigem conferência; a checagem de calendário não consolida consumo de entregas em calendários históricos, que atualmente não são armazenados no sistema.
+
+Testes: `node --test tests/*.test.mjs`. Incluem PostgreSQL local (PGlite) executando migração/RLS, testes de geração com provedor simulado, extração provisória/corrigível, falha de PDF, dependências, escopo e exportação. Testes com provedor simulado não medem a precisão real de OCR ou de decisões estratégicas.

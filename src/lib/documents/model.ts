@@ -235,6 +235,31 @@ export function marketingDocument(
       text: `SYNA. Plano de marketing de ${client.company_name}. Versão ${plan.version}. Atualizado em ${dateText(plan.updated_at)}. Registro interno ${plan.id}.`,
     },
   );
+  if (content.governanca) {
+    blocks.push({
+      kind: "heading",
+      level: 1,
+      text: "9 Fundamentos, escopo e condições de execução",
+    });
+    blocks.push({
+      kind: "text",
+      text: `Regras ${content.governanca.instructionVersion}. Escopo ${content.governanca.scopeVersion ?? "não confirmado"}. Verificação automática não equivale à aprovação do cliente.`,
+    });
+    for (const check of content.governanca.checks)
+      blocks.push({ kind: "text", label: check.severity, text: check.message });
+    for (const action of content.governanca.actions)
+      blocks.push({
+        kind: "text",
+        label: action.title,
+        text: `${action.release}. Escopo: ${action.scopeClass}. Fundamento: ${action.evidenceIds.join(", ")}. Início: ${action.startCondition}. Dependências: ${action.prerequisites.join(", ")}. Entrega: ${action.deliverable}. Responsável: ${action.owner}. Recursos: ${action.resources}. Conclusão: ${action.completion}. Avaliação: ${action.metricId}.`,
+      });
+    for (const source of content.governanca.sources)
+      blocks.push({
+        kind: "text",
+        label: source.id,
+        text: `${source.kind}; ${source.reference}; ${source.date}. ${source.value}`,
+      });
+  }
   return {
     title: "Plano de marketing",
     client: client.company_name,

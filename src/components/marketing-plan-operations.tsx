@@ -1,3 +1,4 @@
+import { reviewMarketingPlan } from "@/lib/plan-review.functions";
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -85,22 +86,15 @@ export function PlanOperations({
         return;
       }
       if (kind === "version") {
-        const { data, error } = await supabase
-          .from("marketing_plans")
-          .select("version")
-          .eq("client_id", plan.client_id)
-          .order("version", { ascending: false })
-          .limit(1);
-        if (error) throw error;
-        const result = await supabase.from("marketing_plans").insert({
-          client_id: plan.client_id,
-          diagnostic_id: plan.diagnostic_id,
-          version: (data[0]?.version ?? 0) + 1,
-          content: plan.content as Json,
-          ai_warning:
-            "Nova revisão manual. Revise evidências, metas e aprendizados antes de aprovar.",
+        await reviewMarketingPlan({
+          data: {
+            planId: plan.id,
+            revision: plan.updated_at,
+            content,
+            approve: false,
+            newVersion: true,
+          },
         });
-        if (result.error) throw result.error;
         return;
       }
       if (plan.status !== "aprovado")
@@ -121,6 +115,22 @@ export function PlanOperations({
       }
       const action = content.acoes[index];
       if (!action) throw new Error("Ação não encontrada.");
+      if (content.governanca) {
+        const basis = content.governanca.actions.find((a) => a.title === action.titulo);
+        if (!basis || basis.release !== "liberada")
+          throw new Error(
+            "Esta ação é condicional. Resolva os pré-requisitos e revalide antes de executar.",
+          );
+        const { data: scope, error } = await supabase
+          .from("client_scopes")
+          .select("id")
+          .eq("client_id", plan.client_id)
+          .order("version", { ascending: false })
+          .limit(1);
+        if (error) throw error;
+        if ((scope[0]?.id ?? "") !== content.governanca.scopeId)
+          throw new Error("O escopo mudou. Revalide o plano antes de executar.");
+      }
       if (action.prazo && !/^\d{4}-\d{2}-\d{2}$/.test(action.prazo))
         throw new Error("Revise o prazo desta ação para uma data no formato AAAA-MM-DD.");
       const pillar = FOUR_PS.includes(action.pilar as (typeof FOUR_PS)[number])
