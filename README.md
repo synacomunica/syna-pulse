@@ -57,3 +57,13 @@ Rascunhos são identificados como propostas a validar no documento.
 Validação: `node --test tests/*.test.mjs`, `npx tsc --noEmit`, `npm run lint`
 e `npm run build`. Para gerar um exemplo de QA com os três formatos:
 `SCHEDULE_QA_DOCX=/tmp/cronograma.docx node --test tests/content-schedule.test.mjs`.
+
+### Exportação de documentos
+
+Planos de marketing e relatórios de diagnóstico oferecem DOCX editável (Word e importação no Google Docs) e PDF com texto selecionável. A exportação utiliza os registros salvos, preserva versão, situação e avisos da IA, e não executa uma nova geração de conteúdo. Salve alterações antes de exportar.
+
+A apresentação adota a NBR 10719 para relatórios técnicos: A4, margens superior/esquerda de 3 cm e inferior/direita de 2 cm, corpo de 12 pontos, espaçamento simples, capa, resumo, sumário, seções hierárquicas, identificação das fontes e paginação visível a partir do texto. Gráficos usam somente notas disponíveis; ausência de dados não vira zero. Referência: https://www.ccsa.ufpb.br/propesq/contents/downloads/normas-abnt/abnt_nbr_10719.pdf
+
+No Word, atualize o campo do sumário após abrir ou editar para preencher os números de página. Ao converter no Google Docs, atualize ou reinsira o sumário a partir dos títulos importados. O PDF já contém o sumário paginado. A paginação pode variar entre editores.
+
+Validação: `node --test tests/*.test.mjs`, `npx tsc --noEmit`, `npm run lint` e `NITRO_PRESET=vercel npm run build`. Os testes de documentos verificam conteúdo, ausência de tokens privados, formatação DOCX e geração real de PDF.

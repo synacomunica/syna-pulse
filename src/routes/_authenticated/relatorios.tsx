@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Printer } from "lucide-react";
+import { DocumentExport } from "@/components/document-export";
+import { reportDocument, overallScore } from "@/lib/documents/model";
 import { supabase } from "@/integrations/supabase/client";
 import { AppShell } from "@/components/app-shell";
 import { PillarCard, type PillarScoreRow } from "@/components/pillar-matrix";
 import { ScoreDial } from "@/components/score-badge";
-import { FOUR_PS, PILLARS, PILLAR_LABEL, ACTION_STATUS_LABEL, PRIORITY_LABEL } from "@/lib/pillars";
+import { PILLARS, PILLAR_LABEL, ACTION_STATUS_LABEL, PRIORITY_LABEL } from "@/lib/pillars";
 import { formatDate } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/relatorios")({
@@ -27,15 +28,22 @@ export const Route = createFileRoute("/_authenticated/relatorios")({
 function Reports() {
   const [diagId, setDiagId] = useState("");
 
-  const { data: diagnostics = [] } = useQuery({
+  const {
+    data: diagnostics = [],
+    isPending: optionsPending,
+    error: optionsError,
+  } = useQuery({
     queryKey: ["report-options"],
     queryFn: async () => {
       const [diags, clients] = await Promise.all([
         supabase.from("diagnostics").select("*").order("created_at", { ascending: false }),
-        supabase.from("clients").select("id, company_name"),
+        supabase.from("clients").select("id, company_name, city"),
       ]);
+      if (diags.error) throw diags.error;
+      if (clients.error) throw clients.error;
       return (diags.data ?? []).map((d) => ({
         ...d,
+        clientCity: clients.data?.find((c) => c.id === d.client_id)?.city ?? null,
         clientName: clients.data?.find((c) => c.id === d.client_id)?.company_name ?? "Cliente",
       }));
     },
@@ -44,40 +52,71 @@ function Reports() {
   const active = diagId || diagnostics[0]?.id || "";
   const diag = diagnostics.find((d) => d.id === active);
 
-  const { data } = useQuery({
+  const {
+    data,
+    isFetching,
+    error: reportError,
+  } = useQuery({
     queryKey: ["report", active],
     enabled: Boolean(active),
     queryFn: async () => {
       const [scores, actions] = await Promise.all([
         supabase.from("pillar_scores").select("*").eq("diagnostic_id", active),
-        supabase.from("action_items").select("*").eq("diagnostic_id", active),
+        supabase
+          .from("action_items")
+          .select("*")
+          .eq("diagnostic_id", active)
+          .order("position")
+          .order("created_at"),
       ]);
+      if (scores.error) throw scores.error;
+      if (actions.error) throw actions.error;
       const rows = (scores.data ?? []) as unknown as PillarScoreRow[];
       return {
         scores: PILLARS.map((p) => rows.find((r) => r.pillar === p)).filter(
           Boolean,
         ) as PillarScoreRow[],
         actions: actions.data ?? [],
+        rawScores: scores.data ?? [],
       };
     },
   });
 
-  const fourP = (data?.scores ?? []).filter((s) => FOUR_PS.includes(s.pillar));
-  const overall = fourP.length
-    ? fourP.reduce((a, s) => a + Number(s.final_score ?? s.auto_score ?? 0), 0) / fourP.length
-    : null;
+  const overall = overallScore(data?.rawScores ?? []);
 
   return (
     <AppShell
       title="Relatórios"
       subtitle="Documento estratégico para apresentar ao cliente"
       actions={
-        <button className="btn-ghost" onClick={() => window.print()}>
-          <Printer className="h-4 w-4" /> Exportar PDF
-        </button>
+        <DocumentExport
+          disabled={
+            !diag || !data || isFetching || optionsPending || Boolean(optionsError || reportError)
+          }
+          load={async () => {
+            if (!diag || !data) throw new Error("Selecione um diagnóstico carregado.");
+            return reportDocument(
+              diag,
+              { company_name: diag.clientName, city: diag.clientCity },
+              data.rawScores,
+              data.actions,
+            );
+          }}
+        />
       }
     >
-      {diagnostics.length === 0 ? (
+      <p className="text-xs text-muted-foreground mb-4">
+        Exportação em documento A4 com formatação de relatório técnico ABNT. O Word pode ser aberto
+        no Google Docs; atualize o sumário após abrir ou editar.
+      </p>
+      {(optionsError || reportError) && (
+        <p role="alert" className="text-destructive">
+          {(optionsError || reportError)?.message}
+        </p>
+      )}
+      {optionsPending || isFetching ? (
+        <p role="status">Carregando relatório...</p>
+      ) : diagnostics.length === 0 ? (
         <div className="surface-card p-6 text-sm text-muted-foreground">
           <p className="font-medium text-foreground">Nenhum diagnóstico disponível.</p>
           <p className="mt-2">

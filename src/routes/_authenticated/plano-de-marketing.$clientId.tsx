@@ -1,3 +1,5 @@
+import { DocumentExport } from "@/components/document-export";
+import { marketingDocument } from "@/lib/documents/model";
 import { useAuth } from "@/hooks/useAuth";
 import { MarketingPlanChannels } from "@/components/marketing-plan-channels";
 import { ContentScheduleGenerator } from "@/components/content-schedule-generator";
@@ -399,6 +401,42 @@ function PlanEditor({
             Ver diagnóstico de origem
           </Link>
         )}
+        <div className="mt-4">
+          <DocumentExport
+            disabled={dirty || mutation.isPending || channelRevision.isPending || !draft}
+            load={async () => {
+              const [{ data: current, error }, { data: client, error: clientError }] =
+                await Promise.all([
+                  supabase.from("marketing_plans").select("*").eq("id", plan.id).single(),
+                  supabase
+                    .from("clients")
+                    .select("company_name,city")
+                    .eq("id", plan.client_id)
+                    .single(),
+                ]);
+              if (error) throw error;
+              if (clientError) throw clientError;
+              if (current.updated_at !== revision)
+                throw new Error("O plano mudou. Recarregue antes de exportar.");
+              let title = "";
+              if (current.diagnostic_id) {
+                const { data: diagnostic, error: diagnosticError } = await supabase
+                  .from("diagnostics")
+                  .select("title")
+                  .eq("id", current.diagnostic_id)
+                  .single();
+                if (diagnosticError) throw diagnosticError;
+                title = diagnostic.title ?? "";
+              }
+              return marketingDocument(current, client, title);
+            }}
+          />
+          <p className="mt-2 text-xs text-muted-foreground">
+            Documento A4 com formatação de relatório técnico ABNT. O Word é editável no Google Docs;
+            atualize o sumário após abrir ou editar.{" "}
+            {dirty ? "Salve suas alterações antes de exportar." : ""}
+          </p>
+        </div>
         {plan.status === "rascunho_ia" && draft && (
           <div className="mt-4 flex flex-wrap gap-2">
             {editing ? (
