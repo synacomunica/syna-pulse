@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useLocation } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -25,8 +25,13 @@ export const Route = createFileRoute("/_authenticated/clientes")({
       },
     ],
   }),
-  component: ClientsPage,
+  component: ClientsRoute,
 });
+
+function ClientsRoute() {
+  const pathname = useLocation({ select: (location) => location.pathname });
+  return pathname.replace(/\/$/, "") === "/clientes" ? <ClientsPage /> : <Outlet />;
+}
 
 const STATUSES = Object.keys(CLIENT_STATUS_LABEL);
 
