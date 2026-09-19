@@ -380,11 +380,18 @@ export function PlanOperations({
               !/^\d{4}-\d{2}-\d{2}$/.test(action.prazo) ||
               action.prazo <= cutoff.toISOString().slice(0, 10),
           )
-          .sort(
-            (a, b) =>
+          .sort((a, b) => {
+            if (content.governanca) {
+              const order = content.governanca.actions.map((item) => item.title);
+              const rank = (title: string) =>
+                order.includes(title) ? order.indexOf(title) : Infinity;
+              return rank(a.action.titulo) - rank(b.action.titulo);
+            }
+            return (
               (PRIORITY_ORDER[a.action.prioridade] ?? 4) -
-              (PRIORITY_ORDER[b.action.prioridade] ?? 4),
-          )
+              (PRIORITY_ORDER[b.action.prioridade] ?? 4)
+            );
+          })
           .map(({ action, index }) => (
             <article key={index} className="rounded-lg border border-border p-4">
               <h3 className="font-bold">

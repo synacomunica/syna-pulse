@@ -335,3 +335,51 @@ test("untrusted documents cannot set system policy", () => {
   assert.equal(s.items[0].confirmed, false);
   assert.equal(s.items[0].classification, "nao_mencionado");
 });
+
+test("scope reference cannot bypass format or channel limits", () => {
+  assert.throws(
+    () =>
+      checkScheduleScope(
+        [{ data: "2026-10-01", canal: "TikTok", formato: "video", scopeItemId: "posts" }],
+        scope(),
+      ),
+    /não corresponde/,
+  );
+});
+test("invalid calendar date is rejected", () => {
+  assert.throws(
+    () =>
+      checkScheduleScope(
+        [{ data: "2026-02-30", canal: "Instagram", formato: "estatico" }],
+        scope(),
+      ),
+    /Data inválida/,
+  );
+});
+test("business-day windows exclude weekends", () => {
+  const g = complete(),
+    s = scope();
+  s.content.items[0].productionDays = 2;
+  s.content.items[0].approvalDays = 1;
+  s.content.items[0].deadlineBasis = "uteis";
+  g.actions[0].startDate = "2026-10-02";
+  g.actions[0].endDate = "2026-10-05";
+  assert.ok(codes(validateGovernance(g, s)).includes("production_window"));
+  g.actions[0].endDate = "2026-10-07";
+  assert.ok(!codes(validateGovernance(g, s)).includes("production_window"));
+  assert.ok(codes(validateGovernance(g, s)).includes("local_holidays"));
+});
+test("unspecified deadline basis requires confirmation", () => {
+  const s = scope();
+  s.content.items[0].productionDays = 2;
+  assert.ok(codes(validateGovernance(complete(), s)).includes("deadline_basis"));
+});
+
+test("metric pending decision keeps independent actions usable", () => {
+  const g = complete();
+  g.indicators.push({ ...g.indicators[0], id: "other", definition: "" });
+  g.actions.push({ ...g.actions[0], actionId: "b", metricId: "other", quantity: 0 });
+  const r = validateGovernance(g, scope());
+  assert.equal(r.actions.find((a) => a.actionId === "a").release, "liberada");
+  assert.equal(r.actions.find((a) => a.actionId === "b").release, "condicional");
+});

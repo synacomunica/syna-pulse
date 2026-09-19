@@ -9,6 +9,7 @@ const empty = () => scopeSchema.parse({});
 export function ClientContracts({ clientId }: { clientId: string }) {
   const qc = useQueryClient();
   const [busy, setBusy] = useState("");
+  const [operationError, setOperationError] = useState("");
   const [scope, setScope] = useState<Scope>(empty);
   const [editing, setEditing] = useState(false);
   const [expected, setExpected] = useState("");
@@ -49,12 +50,18 @@ export function ClientContracts({ clientId }: { clientId: string }) {
   const refresh = () => qc.invalidateQueries({ queryKey: ["client-contracts", clientId] });
   async function run(label: string, fn: () => Promise<void>) {
     setBusy(label);
+    setOperationError("");
     try {
       await fn();
-      await refresh();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Operação não concluída.");
+      const message =
+        e && typeof e === "object" && "message" in e
+          ? String(e.message)
+          : "Operação não concluída.";
+      setOperationError(message);
+      toast.error(message);
     } finally {
+      await refresh();
       setBusy("");
     }
   }
@@ -170,6 +177,11 @@ export function ClientContracts({ clientId }: { clientId: string }) {
         />
       </label>
       {busy && <p role="status">{busy}</p>}
+      {operationError && (
+        <p role="alert" className="text-destructive">
+          {operationError}
+        </p>
+      )}
       {query.data?.documents.map((d) => (
         <article key={d.id} className="rounded border p-3 space-y-2">
           <strong>
@@ -418,6 +430,11 @@ export function ClientContracts({ clientId }: { clientId: string }) {
                         "responsibility",
                         "Responsabilidade",
                         ["agencia", "cliente", "terceiro", "indefinido"],
+                      ],
+                      [
+                        "deadlineBasis",
+                        "Contagem dos prazos",
+                        ["uteis", "corridos", "nao_informado"],
                       ],
                       ["counting", "Contagem", ["independente", "incluido_no_total", "ambiguo"]],
                       [

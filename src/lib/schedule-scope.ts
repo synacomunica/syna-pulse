@@ -1,4 +1,4 @@
-import { type ScopeSnapshot, type Governance } from "./planning-policy";
+import { type ScopeSnapshot, type Governance, validDate, elapsedDays } from "./planning-policy";
 export function checkScheduleScope(
   items: { data: string; canal: string; formato: string; scopeItemId?: string | undefined }[],
   scope: ScopeSnapshot | null,
@@ -11,6 +11,7 @@ export function checkScheduleScope(
     ];
   const totals = new Map<string, number>();
   for (const item of items) {
+    if (!validDate(item.data)) throw new Error("Data inválida no cronograma.");
     const candidates = scope.content.items.filter(
       (s) =>
         s.formats.includes(item.formato) &&
@@ -18,7 +19,7 @@ export function checkScheduleScope(
           s.channels.some((c) => c.toLowerCase() === item.canal.toLowerCase())),
     );
     const matched = item.scopeItemId
-      ? scope.content.items.find((s) => s.id === item.scopeItemId)
+      ? candidates.find((s) => s.id === item.scopeItemId)
       : candidates.length === 1
         ? candidates[0]
         : undefined;
@@ -31,6 +32,8 @@ export function checkScheduleScope(
       (scope.content.validUntil && item.data > scope.content.validUntil)
     )
       throw new Error("Cronograma fora da vigência do escopo; confirme continuidade.");
+    if (item.scopeItemId && !matched)
+      throw new Error("A referência de escopo não corresponde ao formato e canal desta entrega.");
     if (!matched || !matched.confirmed || matched.classification !== "incluido") {
       issues.push(`${item.formato}/${item.canal}: enquadramento não confirmado.`);
       continue;
@@ -48,10 +51,18 @@ export function checkScheduleScope(
     if (
       matched.productionDays !== null &&
       matched.approvalDays !== null &&
-      (Date.parse(item.data) - Date.parse(new Date().toISOString().slice(0, 10))) / 86400000 <
+      elapsedDays(new Date().toISOString().slice(0, 10), item.data, matched.deadlineBasis) <
         matched.productionDays + matched.approvalDays
     )
       throw new Error("Data não comporta os prazos de produção e aprovação.");
+    if (matched.productionDays !== null || matched.approvalDays !== null)
+      issues.push(
+        matched.deadlineBasis === "uteis"
+          ? "Prazos úteis excluem fins de semana; confirmar feriados locais e o recebimento dos materiais antes de liberar a data."
+          : matched.deadlineBasis === "nao_informado"
+            ? "Confirmar se os prazos de produção/aprovação são dias úteis ou corridos."
+            : "",
+      );
     const consume = (id: string) => {
       const s = scope.content.items.find((x) => x.id === id);
       if (!s) return;
@@ -81,5 +92,5 @@ export function checkScheduleScope(
   }
   if (g?.claims.some((c) => c.status === "pendente"))
     issues.push("Afirmações sensíveis pendentes no plano: não publicar sem evidência.");
-  return [...new Set(issues)];
+  return [...new Set(issues.filter(Boolean))];
 }

@@ -65,5 +65,9 @@ export function reviewPlanContent(content: MarketingPlanContent, scope: ScopeSna
     if (sensitive.test(statement) && !g.claims.some((c) => c.text === statement))
       g.claims.push({ text: statement, evidenceIds: [], status: "pendente", consultationDate: "" });
   content.governanca = validateGovernance(g, scope);
+  const order = new Map(content.governanca.actions.map((a, i) => [a.title, i]));
+  content.acoes.sort(
+    (a, b) => (order.get(a.titulo) ?? Infinity) - (order.get(b.titulo) ?? Infinity),
+  );
   return content;
 }

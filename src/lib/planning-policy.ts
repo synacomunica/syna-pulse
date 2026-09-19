@@ -1,5 +1,5 @@
 import { z } from "zod";
-export const POLICY_VERSION = "2026-09-16.1";
+export const POLICY_VERSION = "2026-09-19.1";
 const text = z.string().max(12000).default("");
 const texts = z.array(z.string()).default([]);
 const num = z.number().finite().nullable().default(null);
@@ -20,6 +20,7 @@ export const scopeItemSchema = z.object({
   responsibility: z.enum(["agencia", "cliente", "terceiro", "indefinido"]).default("indefinido"),
   productionDays: num,
   approvalDays: num,
+  deadlineBasis: z.enum(["uteis", "corridos", "nao_informado"]).default("nao_informado"),
   revisionLimit: num,
   capture: text,
   travel: text,
@@ -32,6 +33,18 @@ export const scopeItemSchema = z.object({
   origin: z.enum(["contrato", "esclarecimento", "manual"]).default("manual"),
   confirmed: z.boolean().default(false),
 });
+// Count elapsed days after the start event, never treating weekends as business days.
+export function elapsedDays(start: string, end: string, basis: string): number {
+  if (!validDate(start) || !validDate(end)) return NaN;
+  const days = (Date.parse(end) - Date.parse(start)) / 86400000;
+  if (basis !== "uteis" || days < 0) return days;
+  let count = 0;
+  for (let n = 1; n <= days; n++) {
+    const weekday = new Date(Date.parse(start) + n * 86400000).getUTCDay();
+    if (weekday !== 0 && weekday !== 6) count++;
+  }
+  return count;
+}
 export const scopeSchema = z.object({
   items: z.array(scopeItemSchema).max(150).default([]),
   validFrom: text,
@@ -236,10 +249,16 @@ export function validateGovernance(
     if (!i.resolution && i.priority === "impede_decisao")
       check("decision_pending", i.question, i.actionIds.join(","));
   for (const i of g.indicators) {
+    const affected =
+      g.actions
+        .filter((a) => a.metricId === i.id)
+        .map((a) => a.actionId)
+        .join(",") || `metric:${i.id}`;
     if (!i.definition || !i.unit || !i.period || !i.population || !i.owner || !i.justification)
       check(
         "metric_context",
         `Completar definição, unidade, período, população, justificativa e responsável: ${i.name}.`,
+        affected,
       );
     if (i.current !== null && !grounded(i.sourceIds)) {
       i.current = null;
@@ -258,11 +277,19 @@ export function validateGovernance(
         });
       if (recorded.length && !recorded.includes(i.current)) {
         i.current = null;
-        check("baseline_mismatch", `Valor atual não corresponde às métricas citadas: ${i.name}.`);
+        check(
+          "baseline_mismatch",
+          `Valor atual não corresponde às métricas citadas: ${i.name}.`,
+          affected,
+        );
       }
     }
     if (i.type === "projecao" && !grounded(i.sourceIds))
-      check("projection_evidence", `Projeção sem base: ${i.name}. Usar cenário ilustrativo.`);
+      check(
+        "projection_evidence",
+        `Projeção sem base: ${i.name}. Usar cenário ilustrativo.`,
+        affected,
+      );
     if (
       i.salesCycleDays !== null &&
       i.evaluationDays !== null &&
@@ -271,6 +298,7 @@ export function validateGovernance(
       check(
         "sales_cycle",
         `${i.name}: ciclo comercial maior que a janela; medir avanço de oportunidades, não prometer fechamentos.`,
+        affected,
       );
   }
   for (const pending of scope?.content.uncertainties ?? [])
@@ -372,10 +400,21 @@ export function validateGovernance(
       a.endDate &&
       item.productionDays !== null &&
       item.approvalDays !== null &&
-      (Date.parse(a.endDate) - Date.parse(a.startDate)) / 86400000 <
+      elapsedDays(a.startDate, a.endDate, item.deadlineBasis) <
         item.productionDays + item.approvalDays
     )
       check("production_window", "Janela menor que produção e aprovação previstas.", a.actionId);
+    if (item && (item.productionDays !== null || item.approvalDays !== null)) {
+      if (item.deadlineBasis === "nao_informado")
+        check("deadline_basis", "Confirmar se os prazos são dias úteis ou corridos.", a.actionId);
+      else if (item.deadlineBasis === "uteis")
+        check(
+          "local_holidays",
+          "Conferir feriados locais e recebimento dos materiais antes de liberar as datas.",
+          a.actionId,
+          "aviso",
+        );
+    }
     if (
       scope &&
       ((a.startDate && scope.content.validFrom && a.startDate < scope.content.validFrom) ||
