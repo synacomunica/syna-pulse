@@ -1,3 +1,4 @@
+import { aiRequest } from "./ai-request.server";
 import { diagnosticSources } from "./plan-sources.server";
 import { reviewPlanContent } from "./plan-quality";
 import { planningContext } from "./client-scope.server";
@@ -103,7 +104,7 @@ export async function generatePlan(db: SupabaseClient<Database>, diagnosticId: s
       "IA não configurada no servidor. Este rascunho contém apenas dados do diagnóstico; complete a estratégia manualmente antes de aprovar.";
   } else {
     try {
-      const response = await fetch(
+      const response = await aiRequest(
         geminiKey
           ? "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
           : "https://ai.gateway.lovable.dev/v1/chat/completions",

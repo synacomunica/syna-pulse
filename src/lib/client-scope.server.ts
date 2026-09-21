@@ -1,3 +1,4 @@
+import { aiRequest } from "./ai-request.server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/integrations/supabase/types";
 import { createHash } from "node:crypto";
@@ -90,7 +91,7 @@ export async function extractScope(db: SupabaseClient<Database>, documentId: str
       throw new Error(
         "Leitura de PDF indisponível sem GEMINI_API_KEY. Registre o escopo manualmente.",
       );
-    const response = await fetch(
+    const response = await aiRequest(
       `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(process.env["GEMINI_MODEL"] || "gemini-3.5-flash")}:generateContent`,
       {
         method: "POST",

@@ -1,3 +1,4 @@
+import { aiRequest } from "./ai-request.server";
 import { planningContext } from "./client-scope.server";
 import { PLANNING_RULES } from "./planning-policy";
 import { checkScheduleScope } from "./schedule-scope";
@@ -57,7 +58,7 @@ export async function generateSchedule(
   if (!key) throw new Error("Configure GEMINI_API_KEY na Vercel para gerar conteúdos.");
   let raw: unknown;
   try {
-    const response = await fetch(
+    const response = await aiRequest(
       geminiKey
         ? "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
         : "https://ai.gateway.lovable.dev/v1/chat/completions",
