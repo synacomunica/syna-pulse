@@ -2,7 +2,13 @@ import { aiRequest } from "./ai-request.server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/integrations/supabase/types";
 import { createHash } from "node:crypto";
-import { scopeSchema, type ScopeSnapshot, type Source, PLANNING_RULES } from "./planning-policy";
+import {
+  scopeSchema,
+  type ScopeSnapshot,
+  type Source,
+  PLANNING_RULES,
+  normalizeScopeDates,
+} from "./planning-policy";
 import { aiSchema } from "./marketing-plan-schema";
 export async function planningContext(db: SupabaseClient<Database>, clientId: string) {
   const [scopes, documents, inputs] = await Promise.all([
@@ -135,6 +141,7 @@ export async function extractScope(db: SupabaseClient<Database>, documentId: str
           .join("") ?? "null",
       ),
     );
+    normalizeScopeDates(scope);
     const itemIds = new Map(scope.items.map((i, n) => [i.id, `${doc.id}:${n + 1}`]));
     scope.items = scope.items.map((i, n) => ({
       ...i,

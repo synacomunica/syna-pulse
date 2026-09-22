@@ -3,7 +3,12 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { processContract, confirmScope } from "@/lib/client-scope.functions";
-import { scopeSchema, scopeItemSchema, type Scope } from "@/lib/planning-policy";
+import {
+  scopeSchema,
+  scopeItemSchema,
+  normalizeScopeDates,
+  type Scope,
+} from "@/lib/planning-policy";
 import type { Tables } from "@/integrations/supabase/types";
 const empty = () => scopeSchema.parse({});
 export function ClientContracts({ clientId }: { clientId: string }) {
@@ -66,7 +71,7 @@ export function ClientContracts({ clientId }: { clientId: string }) {
     }
   }
   function edit(content: unknown, documentIds: string[]) {
-    setScope(scopeSchema.parse(content));
+    setScope(normalizeScopeDates(scopeSchema.parse(content)));
     setDocs(documentIds);
     setExpected(query.data?.scopes[0]?.id ?? "");
     setEditing(true);

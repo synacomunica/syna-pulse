@@ -202,6 +202,21 @@ export function validDate(value: string) {
     new Date(value).toISOString().slice(0, 10) === value
   );
 }
+/** Normalize an explicit Brazilian date without guessing ambiguous or incomplete dates. */
+export function normalizeScopeDates(scope: Scope): Scope {
+  for (const field of ["validFrom", "validUntil"] as const) {
+    const original = scope[field].trim();
+    if (!original) continue;
+    const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(original);
+    const iso = match ? `${match[3]}-${match[2]}-${match[1]}` : original;
+    if (validDate(iso)) scope[field] = iso;
+    else {
+      scope[field] = "";
+      scope.uncertainties.push(`Conferir data de vigência ilegível ou inválida: ${original}.`);
+    }
+  }
+  return scope;
+}
 export function scopeFingerprint(scope: ScopeSnapshot | null) {
   return scope ? `${scope.id}:${scope.version}:${scope.status}` : "sem-escopo";
 }

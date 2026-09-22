@@ -14,7 +14,8 @@ export function checkScheduleScope(
     if (!validDate(item.data)) throw new Error("Data inválida no cronograma.");
     const candidates = scope.content.items.filter(
       (s) =>
-        s.formats.includes(item.formato) &&
+        (s.formats.includes(item.formato) ||
+          (s.classification === "excluido" && !s.formats.length && s.channels.length > 0)) &&
         (!s.channels.length ||
           s.channels.some((c) => c.toLowerCase() === item.canal.toLowerCase())),
     );

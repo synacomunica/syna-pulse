@@ -7,6 +7,7 @@ const {
   governanceSchema,
   validateGovernance,
   validDate,
+  normalizeScopeDates,
   PLANNING_RULES,
 } = await import(compile("planning-policy"));
 const { checkScheduleScope } = await import(compile("schedule-scope"));
@@ -382,4 +383,31 @@ test("metric pending decision keeps independent actions usable", () => {
   const r = validateGovernance(g, scope());
   assert.equal(r.actions.find((a) => a.actionId === "a").release, "liberada");
   assert.equal(r.actions.find((a) => a.actionId === "b").release, "condicional");
+});
+test("excluded channel applies to all formats even without an enumerated format list", () => {
+  const s = scope();
+  s.content.items.push(
+    scopeItemSchema.parse({
+      id: "tiktok",
+      classification: "excluido",
+      channels: ["TikTok"],
+      formats: [],
+      confirmed: true,
+    }),
+  );
+  assert.throws(
+    () => checkScheduleScope([{ data: "2026-10-01", canal: "TikTok", formato: "video" }], s),
+    /excluído/,
+  );
+});
+
+test("Brazilian extracted dates normalize without guessing invalid dates", () => {
+  const r = normalizeScopeDates(
+    scopeSchema.parse({ validFrom: "01/10/2026", validUntil: "31/12/2026" }),
+  );
+  assert.equal(r.validFrom, "2026-10-01");
+  assert.equal(r.validUntil, "2026-12-31");
+  const invalid = normalizeScopeDates(scopeSchema.parse({ validFrom: "31/02/2026" }));
+  assert.equal(invalid.validFrom, "");
+  assert.equal(invalid.uncertainties.length, 1);
 });
