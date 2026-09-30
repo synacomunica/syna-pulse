@@ -46,13 +46,15 @@ Administradores podem usar **Gerenciar canais** no plano de marketing. Em uma
 versão aprovada, o botão cria uma nova revisão em rascunho; a versão aprovada
 permanece intacta. Preencha canal, objetivo e estratégia e salve o rascunho.
 
-**Gerar cronograma de conteúdos** usa a versão salva, os canais selecionados,
-o período (7 a 90 dias) e de 3 a 12 peças por geração. Usa a mesma
-`GEMINI_API_KEY` (ou o provedor Lovable legado) do plano. O servidor verifica
-perfil administrador e rejeita planos alterados durante a geração. O Word
-inclui calendário, legendas, roteiros por cena, texto/direção de arte e cards.
-Baixe o documento antes de sair: esta geração não cria histórico no banco.
-Rascunhos são identificados como propostas a validar no documento.
+A aba **Conteúdos** organiza ciclos mensais por cliente: direção → banco e seleção → aprovação dos temas → produção → aprovação das peças → publicação → análise. As pautas começam sem formato. A direção usa sugestões do plano e exibe o resumo do diagnóstico, respostas do formulário, avaliações, métricas registradas e escopo vigente. Confirme a prioridade comercial, a capacidade, o total contratado e as visitas antes de selecionar pautas.
+
+Os quatro critérios são obrigatórios para selecionar; aprovação do tema é necessária para produzir e aprovação da peça para registrar publicação. Datas são verificadas em ordem cronológica. A sugestão de prazos é uma proposta em dias corridos e exige ajuste ao contrato. Captações são agrupadas por visita e data, com local, pessoa e equipamento. O escopo existente continua conferindo formatos, canais, contagem de entregas e vigência. Sem escopo confirmado, o sistema avisa que a conferência é manual.
+
+A geração usa somente os próximos 12 temas aprovados, mantendo suas datas e formatos, e recebe o plano, as fontes do diagnóstico, o escopo e o ciclo anterior. Move-se cada peça revisada para produção antes de gerar o próximo lote. Stories exigem inclusão no escopo do mês. Textos e roteiros também podem ser escritos manualmente. Salve o ciclo após gerar: o Word é exportação do último lote, enquanto os textos salvos permanecem no histórico do cliente. A geração usa `GEMINI_API_KEY` ou o provedor Lovable legado e continua restrita a administradores.
+
+Resultados são registrados conforme a função do conteúdo, sem inferir zero para dados ausentes. O fechamento e as aprendizagens de cada peça alimentam a referência e a geração do mês seguinte. O botão de próximo mês carrega somente o banco de ideias, sem reaproveitar aprovações. O módulo registra aprovações recebidas e publicações realizadas; não envia mensagens nem publica nas redes automaticamente.
+
+Antes de publicar, aplicar **`supabase/migrations/20260930120000_editorial_cycles.sql`** após as migrações anteriores. A migração cria `editorial_cycles`, políticas de leitura por cliente, escrita administrativa e proteção da origem. O salvamento usa controle de concorrência para impedir sobrescrita entre sessões; há um ciclo por cliente/mês. Não altera planos nem dados antigos. Aplique a migração no Supabase do ambiente de destino e faça o deploy da aplicação em conjunto.
 
 Validação: `node --test tests/*.test.mjs`, `npx tsc --noEmit`, `npm run lint`
 e `npm run build`. Para gerar um exemplo de QA com os três formatos:
@@ -80,6 +82,6 @@ Aplicar `supabase/migrations/20260916100000_contract_scope.sql` antes de publica
 
 Verificações por código: integridade das referências, pendências e estados, ordem/ciclos de dependências, datas, janelas de produção/aprovação, vigência, quantidades comparáveis, vídeos dentro do total, responsabilidade do cliente, escopo confirmado/substituído, contas de receita mensal de cenários, funil monotônico, capacidade e ciclo de venda. Campos ausentes permanecem desconhecidos. Texto sensível reconhecido por padrões recebe pendência; essa detecção não cobre toda linguagem natural.
 
-Dependem da IA e da conferência humana: extração e correspondência semântica de trechos, relevância das evidências, conflitos em respostas livres, hipóteses causais, escolha de público/canais e adequação das mensagens. Não há navegação externa na geração: o sistema não afirma verificação jurídica ou de mercado atual. Períodos de contrato que não possam ser comparados com segurança exigem conferência; a checagem de calendário não consolida consumo de entregas em calendários históricos, que atualmente não são armazenados no sistema.
+Dependem da IA e da conferência humana: extração e correspondência semântica de trechos, relevância das evidências, conflitos em respostas livres, hipóteses causais, escolha de público/canais e adequação das mensagens. Não há navegação externa na geração: o sistema não afirma verificação jurídica ou de mercado atual. Períodos de contrato que não possam ser comparados com segurança exigem conferência; a checagem de calendário não consolida consumo de entregas em calendários históricos, anteriores; o módulo mensal confere as entregas selecionadas do ciclo atual.
 
 Testes: `node --test tests/*.test.mjs`. Incluem PostgreSQL local (PGlite) executando migração/RLS, testes de geração com provedor simulado, extração provisória/corrigível, falha de PDF, dependências, escopo e exportação. Testes com provedor simulado não medem a precisão real de OCR ou de decisões estratégicas.

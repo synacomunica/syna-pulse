@@ -15,6 +15,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as RedefinirSenhaRouteImport } from './routes/redefinir-senha'
 import { Route as AuthenticatedClientesRouteImport } from './routes/_authenticated/clientes'
 import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authenticated/configuracoes'
+import { Route as AuthenticatedConteudosRouteImport } from './routes/_authenticated/conteudos'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedDiagnosticosRouteImport } from './routes/_authenticated/diagnosticos'
 import { Route as AuthenticatedFormulariosRouteImport } from './routes/_authenticated/formularios'
@@ -59,6 +60,11 @@ const AuthenticatedConfiguracoesRoute =
     path: '/configuracoes',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedConteudosRoute = AuthenticatedConteudosRouteImport.update({
+  id: '/conteudos',
+  path: '/conteudos',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -138,6 +144,7 @@ export interface FileRoutesByFullPath {
   '/redefinir-senha': typeof RedefinirSenhaRoute
   '/clientes': typeof AuthenticatedClientesRouteWithChildren
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
+  '/conteudos': typeof AuthenticatedConteudosRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/diagnosticos': typeof AuthenticatedDiagnosticosRouteWithChildren
   '/formularios': typeof AuthenticatedFormulariosRoute
@@ -158,6 +165,7 @@ export interface FileRoutesByTo {
   '/redefinir-senha': typeof RedefinirSenhaRoute
   '/clientes': typeof AuthenticatedClientesRouteWithChildren
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
+  '/conteudos': typeof AuthenticatedConteudosRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/diagnosticos': typeof AuthenticatedDiagnosticosRouteWithChildren
   '/formularios': typeof AuthenticatedFormulariosRoute
@@ -180,6 +188,7 @@ export interface FileRoutesById {
   '/redefinir-senha': typeof RedefinirSenhaRoute
   '/_authenticated/clientes': typeof AuthenticatedClientesRouteWithChildren
   '/_authenticated/configuracoes': typeof AuthenticatedConfiguracoesRoute
+  '/_authenticated/conteudos': typeof AuthenticatedConteudosRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/diagnosticos': typeof AuthenticatedDiagnosticosRouteWithChildren
   '/_authenticated/formularios': typeof AuthenticatedFormulariosRoute
@@ -202,6 +211,7 @@ export interface FileRouteTypes {
     | '/redefinir-senha'
     | '/clientes'
     | '/configuracoes'
+    | '/conteudos'
     | '/dashboard'
     | '/diagnosticos'
     | '/formularios'
@@ -222,6 +232,7 @@ export interface FileRouteTypes {
     | '/redefinir-senha'
     | '/clientes'
     | '/configuracoes'
+    | '/conteudos'
     | '/dashboard'
     | '/diagnosticos'
     | '/formularios'
@@ -243,6 +254,7 @@ export interface FileRouteTypes {
     | '/redefinir-senha'
     | '/_authenticated/clientes'
     | '/_authenticated/configuracoes'
+    | '/_authenticated/conteudos'
     | '/_authenticated/dashboard'
     | '/_authenticated/diagnosticos'
     | '/_authenticated/formularios'
@@ -309,6 +321,13 @@ declare module '@tanstack/react-router' {
       path: '/configuracoes'
       fullPath: '/configuracoes'
       preLoaderRoute: typeof AuthenticatedConfiguracoesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/conteudos': {
+      id: '/_authenticated/conteudos'
+      path: '/conteudos'
+      fullPath: '/conteudos'
+      preLoaderRoute: typeof AuthenticatedConteudosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/dashboard': {
@@ -450,6 +469,7 @@ const AuthenticatedPlanoDeMarketingRouteWithChildren =
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedClientesRoute: typeof AuthenticatedClientesRouteWithChildren
   AuthenticatedConfiguracoesRoute: typeof AuthenticatedConfiguracoesRoute
+  AuthenticatedConteudosRoute: typeof AuthenticatedConteudosRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedDiagnosticosRoute: typeof AuthenticatedDiagnosticosRouteWithChildren
   AuthenticatedFormulariosRoute: typeof AuthenticatedFormulariosRoute
@@ -463,6 +483,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedClientesRoute: AuthenticatedClientesRouteWithChildren,
   AuthenticatedConfiguracoesRoute: AuthenticatedConfiguracoesRoute,
+  AuthenticatedConteudosRoute: AuthenticatedConteudosRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedDiagnosticosRoute: AuthenticatedDiagnosticosRouteWithChildren,
   AuthenticatedFormulariosRoute: AuthenticatedFormulariosRoute,

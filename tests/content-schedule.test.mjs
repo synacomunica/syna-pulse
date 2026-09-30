@@ -121,16 +121,21 @@ test("validates complete format-specific content and rejects missing briefs", ()
   }
   assert.throws(() => scheduleRequestSchema.parse({ ...request, startDate: "2026-02-30" }));
   assert.throws(() => scheduleRequestSchema.parse({ ...request, count: 13 }));
-  assert.deepEqual(
-    scheduleAiSchema.properties.conteudos.items.properties.formato.enum,
-    request.formats,
-  );
+  assert.deepEqual(scheduleAiSchema.properties.conteudos.items.properties.formato.enum, [
+    ...request.formats,
+    "stories",
+  ]);
 });
-function database({ admin = true, stale = false, changed = false } = {}) {
+function database({ admin = true, stale = false, changed = false, cycle = null } = {}) {
   let reads = 0;
   return {
     from(table) {
+      let history = false;
       const q = {
+        lt() {
+          history = true;
+          return q;
+        },
         select() {
           return q;
         },
@@ -147,29 +152,32 @@ function database({ admin = true, stale = false, changed = false } = {}) {
           return q;
         },
         then(resolve) {
-          const data = ["client_scopes", "client_documents", "client_planning_inputs"].includes(
-            table,
-          )
-            ? []
-            : table === "user_roles"
-              ? [{ role: admin ? "admin" : "equipe" }]
-              : table === "clients"
-                ? { company_name: "Demonstração" }
-                : {
-                    id: request.planId,
-                    client_id: "client",
-                    version: 2,
-                    status: "rascunho_ia",
-                    updated_at:
-                      stale || (changed && reads++ > 0)
-                        ? "2026-09-15T12:00:00+00:00"
-                        : request.updatedAt,
-                    content: {
-                      estrategia_central: "Educação",
-                      objetivo_principal: { descricao: "Conversas" },
-                      canais: [{ canal: "Instagram" }],
-                    },
-                  };
+          const data =
+            table === "editorial_cycles"
+              ? history
+                ? []
+                : cycle
+              : ["client_scopes", "client_documents", "client_planning_inputs"].includes(table)
+                ? []
+                : table === "user_roles"
+                  ? [{ role: admin ? "admin" : "equipe" }]
+                  : table === "clients"
+                    ? { company_name: "Demonstração" }
+                    : {
+                        id: request.planId,
+                        client_id: "client",
+                        version: 2,
+                        status: "rascunho_ia",
+                        updated_at:
+                          stale || (changed && reads++ > 0)
+                            ? "2026-09-15T12:00:00+00:00"
+                            : request.updatedAt,
+                        content: {
+                          estrategia_central: "Educação",
+                          objetivo_principal: { descricao: "Conversas" },
+                          canais: [{ canal: "Instagram" }],
+                        },
+                      };
           return Promise.resolve({ data, error: null }).then(resolve);
         },
       };
@@ -237,4 +245,91 @@ test("Word export produces an actual DOCX containing every production brief", as
   assert.equal(buffer.subarray(0, 2).toString(), "PK");
   assert.ok(buffer.length > 8000);
   if (process.env.SCHEDULE_QA_DOCX) writeFileSync(process.env.SCHEDULE_QA_DOCX, buffer);
+});
+
+test("generation preserves approved topics and sends monthly direction to the provider", async () => {
+  const { newTopic } = await import(compile("editorial-workflow"));
+  const topics = fixture.conteudos.map((c) => ({
+    ...newTopic(),
+    theme: c.titulo,
+    approach: c.titulo,
+    audience: "Clientes",
+    need: "Organizar campanhas",
+    message: c.mensagem,
+    cta: c.cta,
+    evidence: "Plano revisado",
+    checks: { priority: true, audience: true, evidence: true, feasible: true },
+    status: "tema_aprovado",
+    themeApproval: "Cliente, reunião 14/09",
+    format: c.formato,
+    channel: c.canal,
+    publication: c.data,
+  }));
+  const workflow = {
+    month: "2026-09",
+    direction: {
+      priority: "Campanhas",
+      product: "Consultoria",
+      audience: "Clientes",
+      barrier: "Dúvidas",
+      benefit: "Clareza",
+      action: "Conversar",
+      event: "",
+      contentLimit: 3,
+      visits: 0,
+      stories: false,
+      capacity: "Equipe interna",
+    },
+    topics,
+    review: { repeat: "", adjust: "", questions: "", delays: "" },
+  };
+  const cycle = {
+    id: "66666666-6666-4666-8666-666666666666",
+    content: workflow,
+    source_updated_at: request.updatedAt,
+    updated_at: request.updatedAt,
+  };
+  const input = { ...request, cycleId: cycle.id, topicIds: topics.map((t) => t.id) };
+  const previousFetch = globalThis.fetch,
+    previousKey = process.env.GEMINI_API_KEY;
+  process.env.GEMINI_API_KEY = "test-only";
+  try {
+    globalThis.fetch = async (_url, options) => {
+      const body = JSON.parse(options.body);
+      const context = JSON.parse(body.messages[1].content);
+      assert.match(context.metodologia.direction, /Consultoria/);
+      assert.equal(context.metodologia.topics.length, 3);
+      return {
+        ok: true,
+        json: async () => ({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  ...fixture,
+                  conteudos: fixture.conteudos.map((c, i) => ({ ...c, pauta_id: topics[i].id })),
+                }),
+              },
+            },
+          ],
+        }),
+      };
+    };
+    assert.equal(
+      (await generateSchedule(database({ cycle }), "user", input)).content.conteudos.length,
+      3,
+    );
+    cycle.content.topics[0].status = "selecionada";
+    await assert.rejects(generateSchedule(database({ cycle }), "user", input), /temas aprovados/);
+    cycle.content.topics[0].status = "tema_aprovado";
+    globalThis.fetch = async () => ({
+      ok: true,
+      json: async () => ({ choices: [{ message: { content: JSON.stringify(fixture) } }] }),
+    });
+    await assert.rejects(generateSchedule(database({ cycle }), "user", input), /alterou pautas/);
+  } finally {
+    globalThis.fetch = previousFetch;
+    if (previousKey === undefined) delete process.env.GEMINI_API_KEY;
+    else process.env.GEMINI_API_KEY = previousKey;
+  }
 });

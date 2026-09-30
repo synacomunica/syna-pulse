@@ -28,6 +28,7 @@ const NAV = [
   { to: "/matriz", label: "Matriz 4P", icon: Grid2x2 },
   { to: "/performance", label: "Performance", icon: TrendingUp },
   { to: "/plano-de-marketing", label: "Plano de Marketing", icon: ListChecks },
+  { to: "/conteudos", label: "Conteúdos", icon: ClipboardList },
   { to: "/plano-de-acao", label: "Plano de Ação", icon: ListChecks },
   { to: "/relatorios", label: "Relatórios", icon: FileText },
   { to: "/configuracoes", label: "Configurações", icon: Settings },

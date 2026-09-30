@@ -4,7 +4,6 @@ import { DocumentExport } from "@/components/document-export";
 import { marketingDocument } from "@/lib/documents/model";
 import { useAuth } from "@/hooks/useAuth";
 import { MarketingPlanChannels } from "@/components/marketing-plan-channels";
-import { ContentScheduleGenerator } from "@/components/content-schedule-generator";
 import { PlanOperations } from "@/components/marketing-plan-operations";
 import { generateMarketingPlan } from "@/lib/marketing-plan.functions";
 import { useState } from "react";
@@ -513,12 +512,16 @@ function PlanEditor({
               </button>
             )}
           </fieldset>
-          <ContentScheduleGenerator
-            plan={plan}
-            content={draft}
-            dirty={dirty}
-            disabled={mutation.isPending || channelRevision.isPending}
-          />
+          <section className="surface-card p-5 space-y-3">
+            <h2 className="text-lg font-bold">Planejamento de conteúdos</h2>
+            <p className="text-sm text-muted-foreground">
+              Defina a direção do mês, aprove pautas e acompanhe produção, publicação e resultados
+              com base neste plano e no diagnóstico.
+            </p>
+            <Link className="btn-primary" to="/conteudos" search={{ clientId: plan.client_id }}>
+              Abrir metodologia de conteúdos
+            </Link>
+          </section>
         </>
       )}
       {draft && <PlanOperations plan={plan} content={draft} dirty={dirty} />}

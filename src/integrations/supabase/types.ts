@@ -14,6 +14,19 @@ export type Database = {
   };
   public: {
     Tables: {
+      editorial_cycles: NewTable<
+        {
+          id: string;
+          client_id: string;
+          plan_id: string;
+          source_updated_at: string;
+          month: string;
+          content: Json;
+          created_at: string;
+          updated_at: string;
+        },
+        "client_id" | "plan_id" | "source_updated_at" | "month" | "content"
+      >;
       client_documents: NewTable<
         {
           id: string;

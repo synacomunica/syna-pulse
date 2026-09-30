@@ -3,6 +3,7 @@ export function checkScheduleScope(
   items: { data: string; canal: string; formato: string; scopeItemId?: string | undefined }[],
   scope: ScopeSnapshot | null,
   g?: Governance,
+  checkLeadTime = true,
 ) {
   const issues: string[] = [];
   if (!scope || scope.status !== "confirmado")
@@ -50,6 +51,7 @@ export function checkScheduleScope(
         "Relação entre entregas ambígua. Esclareça a contagem antes de gerar quantidades.",
       );
     if (
+      checkLeadTime &&
       matched.productionDays !== null &&
       matched.approvalDays !== null &&
       elapsedDays(new Date().toISOString().slice(0, 10), item.data, matched.deadlineBasis) <

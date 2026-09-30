@@ -2,8 +2,13 @@ import { z } from "zod";
 import { aiSchema } from "./marketing-plan-schema";
 
 const text = z.string().trim().min(1).max(6000);
-export const contentFormats = ["video", "estatico", "carrossel"] as const;
-export const formatNames = { video: "Vídeo", estatico: "Post estático", carrossel: "Carrossel" };
+export const contentFormats = ["video", "estatico", "carrossel", "stories"] as const;
+export const formatNames = {
+  video: "Vídeo",
+  estatico: "Post estático",
+  carrossel: "Carrossel",
+  stories: "Stories",
+};
 const date = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/)
@@ -13,13 +18,15 @@ const date = z
   }, "Data inválida");
 export const scheduleRequestSchema = z
   .object({
+    cycleId: z.string().uuid().optional(),
+    topicIds: z.array(z.string().uuid()).max(12).optional(),
     planId: z.string().uuid(),
     updatedAt: z.string().datetime({ offset: true }),
     startDate: date,
     days: z.number().int().min(7).max(90),
     count: z.number().int().min(1).max(12),
     channels: z.array(text.max(150)).min(1).max(12),
-    formats: z.array(z.enum(contentFormats)).min(1).max(3),
+    formats: z.array(z.enum(contentFormats)).min(1).max(4),
   })
   .refine(
     (value) => value.count >= value.formats.length,
@@ -33,6 +40,7 @@ export const scheduleSchema = z.object({
   conteudos: z
     .array(
       z.object({
+        pauta_id: z.string().default(""),
         publico: text.default("A confirmar"),
         necessidade: text.default("A confirmar"),
         evidencia_ids: z.array(z.string()).default([]),
@@ -96,7 +104,7 @@ export function validateSchedule(raw: unknown, request: ScheduleRequest): Conten
       throw new Error("A IA retornou datas fora do período.");
     if (item.formato === "video" && item.cenas.length < 2)
       throw new Error("Roteiro de vídeo incompleto.");
-    if (item.formato === "estatico" && !item.texto_arte.trim())
+    if (["estatico", "stories"].includes(item.formato) && !item.texto_arte.trim())
       throw new Error("Texto do post estático ausente.");
     if (item.formato === "carrossel" && item.cards.length < 3)
       throw new Error("Carrossel precisa de pelo menos três cards completos.");
