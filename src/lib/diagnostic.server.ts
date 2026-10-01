@@ -17,17 +17,23 @@ export interface PublicDiagnostic {
 
 export async function fetchByToken(token: string): Promise<PublicDiagnostic | null> {
   const db = await admin();
-  const { data: diag } = await db
+  const { data: diag, error: diagnosticError } = await db
     .from("diagnostics")
     .select("id, status, current_step, client_id")
     .eq("token", token)
     .maybeSingle();
+  if (diagnosticError)
+    throw new Error("Não foi possível consultar o diagnóstico. Tente novamente.");
   if (!diag) return null;
 
-  const [{ data: client }, { data: rows }] = await Promise.all([
-    db.from("clients").select("company_name, trade_name").eq("id", diag.client_id).maybeSingle(),
-    db.from("answers").select("question_key, value").eq("diagnostic_id", diag.id),
-  ]);
+  const [{ data: client, error: clientError }, { data: rows, error: answersError }] =
+    await Promise.all([
+      db.from("clients").select("company_name, trade_name").eq("id", diag.client_id).maybeSingle(),
+      db.from("answers").select("question_key, value").eq("diagnostic_id", diag.id),
+    ]);
+
+  if (clientError || answersError)
+    throw new Error("Não foi possível carregar as respostas. Tente novamente.");
 
   const answers: AnswerMap = {};
   for (const r of rows ?? []) answers[r.question_key] = r.value as AnswerValue;
@@ -47,11 +53,13 @@ export async function saveAnswers(
   step: number,
 ): Promise<{ ok: boolean }> {
   const db = await admin();
-  const { data: diag } = await db
+  const { data: diag, error: diagnosticError } = await db
     .from("diagnostics")
     .select("id, status")
     .eq("token", token)
     .maybeSingle();
+  if (diagnosticError)
+    throw new Error("Não foi possível consultar o diagnóstico. Tente novamente.");
   if (!diag) throw new Error("Link inválido");
   if (diag.status === "respondido" || diag.status === "em_analise" || diag.status === "validado") {
     return { ok: true };
@@ -75,28 +83,40 @@ export async function saveAnswers(
     if (error) throw new Error(error.message);
   }
 
-  await db
+  const { error: updateError } = await db
     .from("diagnostics")
     .update({ current_step: step, status: "em_preenchimento" })
     .eq("id", diag.id);
 
+  if (updateError) throw new Error("Não foi possível salvar a etapa. Tente novamente.");
   return { ok: true };
 }
 
 export async function submitDiagnostic(token: string): Promise<{ ok: boolean; id: string }> {
   const db = await admin();
-  const { data: diag } = await db
+  const { data: diag, error: diagnosticError } = await db
     .from("diagnostics")
     .select("id, client_id")
     .eq("token", token)
     .maybeSingle();
+  if (diagnosticError)
+    throw new Error("Não foi possível consultar o diagnóstico. Tente novamente.");
   if (!diag) throw new Error("Link inválido");
 
-  await db
+  const { error: submitError } = await db
     .from("diagnostics")
     .update({ status: "respondido", submitted_at: new Date().toISOString() })
     .eq("id", diag.id);
-  await db.from("clients").update({ status: "diagnostico_em_analise" }).eq("id", diag.client_id);
+  if (submitError) throw new Error("Não foi possível enviar o diagnóstico. Tente novamente.");
+  const { error: clientUpdateError } = await db
+    .from("clients")
+    .update({ status: "diagnostico_em_analise" })
+    .eq("id", diag.client_id);
+
+  if (clientUpdateError)
+    throw new Error(
+      "Respostas recebidas, mas não foi possível atualizar o cliente. Tente novamente.",
+    );
 
   // Dispara a análise automaticamente logo após o envio.
   try {
@@ -290,21 +310,27 @@ async function callAi(
 export async function runAnalysis(diagnosticId: string) {
   const db = await admin();
 
-  const { data: diag } = await db
+  const { data: diag, error: diagnosticError } = await db
     .from("diagnostics")
     .select("id, client_id")
     .eq("id", diagnosticId)
     .maybeSingle();
+  if (diagnosticError)
+    throw new Error("Não foi possível consultar o diagnóstico. Tente novamente.");
   if (!diag) throw new Error("Diagnóstico não encontrado");
 
-  const [{ data: client }, { data: rows }] = await Promise.all([
-    db
-      .from("clients")
-      .select("company_name, trade_name, segment, category, city, state")
-      .eq("id", diag.client_id)
-      .maybeSingle(),
-    db.from("answers").select("question_key, value").eq("diagnostic_id", diagnosticId),
-  ]);
+  const [{ data: client, error: clientError }, { data: rows, error: answersError }] =
+    await Promise.all([
+      db
+        .from("clients")
+        .select("company_name, trade_name, segment, category, city, state")
+        .eq("id", diag.client_id)
+        .maybeSingle(),
+      db.from("answers").select("question_key, value").eq("diagnostic_id", diagnosticId),
+    ]);
+
+  if (clientError || answersError)
+    throw new Error("Não foi possível carregar as respostas. Tente novamente.");
 
   const answers: Record<string, unknown> = {};
   for (const r of rows ?? []) answers[r.question_key] = r.value;
@@ -397,13 +423,14 @@ export interface PublicReport {
 /** Relatório somente leitura para o cliente, liberado após a validação da equipe. */
 export async function fetchReportByToken(token: string): Promise<PublicReport | null> {
   const db = await admin();
-  const { data: diag } = await db
+  const { data: diag, error: diagnosticError } = await db
     .from("diagnostics")
     .select(
       "id, client_id, status, created_at, validated_at, overall_score, executive_summary, main_bottleneck, main_opportunity",
     )
     .eq("token", token)
     .maybeSingle();
+  if (diagnosticError) throw new Error("Não foi possível consultar o relatório. Tente novamente.");
   if (!diag || diag.status !== "validado") return null;
 
   const [{ data: client }, { data: scores }, { data: actions }] = await Promise.all([

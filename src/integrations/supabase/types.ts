@@ -183,6 +183,8 @@ export type Database = {
       clients: {
         Row: {
           category: string | null;
+          address: string | null;
+          postal_code: string | null;
           city: string | null;
           cnpj: string | null;
           company_name: string;
@@ -207,6 +209,8 @@ export type Database = {
         };
         Insert: {
           category?: string | null;
+          address?: string | null;
+          postal_code?: string | null;
           city?: string | null;
           cnpj?: string | null;
           company_name: string;
@@ -231,6 +235,8 @@ export type Database = {
         };
         Update: {
           category?: string | null;
+          address?: string | null;
+          postal_code?: string | null;
           city?: string | null;
           cnpj?: string | null;
           company_name?: string;

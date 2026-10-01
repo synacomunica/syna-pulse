@@ -24,24 +24,8 @@ export const createTeamMember = createServerFn({ method: "POST" })
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const password = generatePassword();
-    const { data: created, error } = await supabaseAdmin.auth.admin.createUser({
-      email: data.email,
-      password,
-      email_confirm: true,
-      user_metadata: { full_name: data.fullName },
-    });
-    if (error || !created.user) {
-      throw new Error(error?.message ?? "Não foi possível criar o acesso.");
-    }
-
-    await supabaseAdmin
-      .from("profiles")
-      .upsert({ id: created.user.id, full_name: data.fullName, email: data.email });
-    await supabaseAdmin.from("user_roles").delete().eq("user_id", created.user.id);
-    await supabaseAdmin.from("user_roles").insert({ user_id: created.user.id, role: data.role });
-
-    return { email: data.email, password };
+    const { provisionTeamMember } = await import("./team-member.server");
+    return provisionTeamMember(supabaseAdmin, data, generatePassword());
   });
 
 /** Remove um acesso interno. Somente administradores. */

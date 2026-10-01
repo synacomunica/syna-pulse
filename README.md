@@ -85,3 +85,11 @@ Verificações por código: integridade das referências, pendências e estados,
 Dependem da IA e da conferência humana: extração e correspondência semântica de trechos, relevância das evidências, conflitos em respostas livres, hipóteses causais, escolha de público/canais e adequação das mensagens. Não há navegação externa na geração: o sistema não afirma verificação jurídica ou de mercado atual. Períodos de contrato que não possam ser comparados com segurança exigem conferência; a checagem de calendário não consolida consumo de entregas em calendários históricos, anteriores; o módulo mensal confere as entregas selecionadas do ciclo atual.
 
 Testes: `node --test tests/*.test.mjs`. Incluem PostgreSQL local (PGlite) executando migração/RLS, testes de geração com provedor simulado, extração provisória/corrigível, falha de PDF, dependências, escopo e exportação. Testes com provedor simulado não medem a precisão real de OCR ou de decisões estratégicas.
+
+### Conexão administrativa e endereço (2026-10-01)
+
+Aplicar `supabase/migrations/20261001120000_client_address.sql` no banco usado pelo cadastro. Adiciona endereço completo e CEP opcionais, sem alterar registros existentes.
+
+O servidor administrativo usa o banco de `VITE_SUPABASE_URL` e a chave secreta `SYNA_SUPABASE_SERVICE_ROLE_KEY` desse mesmo projeto. Configure-a somente no servidor, nunca com prefixo `VITE_`. A chave genérica `SUPABASE_SERVICE_ROLE_KEY` continua aceita quando `SUPABASE_URL` corresponde ao banco da aplicação. Chaves de outro projeto são rejeitadas; variáveis de integrações da Vercel não devem substituir silenciosamente o banco do Lovable. Depois de configurar o segredo na Vercel, faça um novo deploy.
+
+Formulários distinguem token inexistente de falha de conexão e permitem tentar novamente. Falhas ao persistir respostas ou enviar não apresentam confirmação de sucesso. A criação de equipe verifica gravação do perfil e do papel solicitado, desfazendo somente o usuário recém-criado se essa etapa falhar.

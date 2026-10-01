@@ -169,6 +169,8 @@ function ClientDetail() {
               <Row label="Cargo" value={client.contact_role} />
               <Row label="E-mail" value={client.email} />
               <Row label="Telefone" value={client.phone} />
+              <Row label="Endereço" value={client.address} />
+              <Row label="CEP" value={client.postal_code} />
               <Row label="Início" value={formatDate(client.start_date)} />
             </dl>
             {client.notes ? (

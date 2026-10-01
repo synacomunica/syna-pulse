@@ -47,7 +47,8 @@ function PublicForm() {
   const save = useServerFn(savePublicAnswers);
   const submit = useServerFn(submitPublicDiagnostic);
 
-  const [state, setState] = useState<"loading" | "ready" | "invalid" | "done">("loading");
+  const [state, setState] = useState<"loading" | "ready" | "invalid" | "error" | "done">("loading");
+  const [retry, setRetry] = useState(0);
   const [company, setCompany] = useState("");
   const [answers, setAnswers] = useState<Answers>({});
   const [step, setStep] = useState(0);
@@ -57,8 +58,11 @@ function PublicForm() {
   const dirty = useRef(false);
 
   useEffect(() => {
+    let active = true;
+    setState("loading");
     load({ data: { token } })
       .then((d) => {
+        if (!active) return;
         if (!d) {
           setState("invalid");
           return;
@@ -72,8 +76,13 @@ function PublicForm() {
             : "ready",
         );
       })
-      .catch(() => setState("invalid"));
-  }, [load, token]);
+      .catch(() => {
+        if (active) setState("error");
+      });
+    return () => {
+      active = false;
+    };
+  }, [load, token, retry]);
 
   const persist = useCallback(
     async (next: Answers, nextStep: number) => {
@@ -81,8 +90,10 @@ function PublicForm() {
       try {
         await save({ data: { token, answers: next, step: nextStep } });
         dirty.current = false;
+        return true;
       } catch {
         toast.error("Não conseguimos salvar agora. Tentaremos novamente.");
+        return false;
       } finally {
         setSaving(false);
       }
@@ -131,7 +142,7 @@ function PublicForm() {
       }
     }
     setInvalidKeys([]);
-    await persist(answers, next);
+    if (!(await persist(answers, next))) return;
     setStep(next);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -150,7 +161,7 @@ function PublicForm() {
 
   const finish = async () => {
     setConfirming(false);
-    await persist(answers, step);
+    if (!(await persist(answers, step))) return;
     try {
       await submit({ data: { token } });
       setState("done");
@@ -163,6 +174,23 @@ function PublicForm() {
     return (
       <Centered>
         <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </Centered>
+    );
+  }
+
+  if (state === "error") {
+    return (
+      <Centered>
+        <div className="surface-card max-w-md p-8 text-center" role="alert">
+          <h1 className="text-xl font-bold">Não foi possível carregar o formulário</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Ocorreu uma falha de conexão com o sistema. Tente novamente. Se continuar, avise a
+            equipe Syna.
+          </p>
+          <button className="btn-primary mt-5" onClick={() => setRetry((value) => value + 1)}>
+            Tentar novamente
+          </button>
+        </div>
       </Centered>
     );
   }
