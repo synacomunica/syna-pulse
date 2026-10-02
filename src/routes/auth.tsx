@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable";
 import { SynaLogo } from "@/components/syna-logo";
 
 export const Route = createFileRoute("/auth")({
@@ -70,15 +69,19 @@ function AuthPage() {
   };
 
   const google = async () => {
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
-    });
-    if (result.error) {
-      toast.error("Não foi possível entrar com o Google.");
-      return;
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: `${window.location.origin}/auth` },
+      });
+      if (error) throw error;
+    } catch {
+      toast.error(
+        "Não foi possível entrar com o Google. Tente novamente ou fale com o administrador.",
+      );
+      setLoading(false);
     }
-    if (result.redirected) return;
-    navigate({ to: "/dashboard" });
   };
 
   return (
@@ -155,6 +158,7 @@ function AuthPage() {
 
           <button
             onClick={google}
+            disabled={loading}
             className="w-full rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-semibold transition-colors hover:bg-accent"
           >
             Continuar com Google
