@@ -12,15 +12,17 @@ export async function aiRequest(url: string, init: RequestInit): Promise<Respons
     const error = await response.clone().text();
     const body = JSON.parse(init.body);
     if (
-      /schema|too many states|constraint|complexity/i.test(error) &&
+      (/schema|too many states|constraint|complexity/i.test(error) ||
+        /"message"\s*:\s*"Request contains an invalid argument\."/.test(error)) &&
+      !/API_KEY_|API key/i.test(error) &&
       body.response_format?.json_schema
     ) {
       const schema = body.response_format.json_schema.schema;
       body.response_format = { type: "json_object" };
-      body.messages.unshift({
-        role: "system",
-        content: `Retorne somente JSON conforme este esquema. A resposta será validada por código: ${JSON.stringify(schema)}`,
-      });
+      const instruction = `Retorne somente JSON conforme este esquema. A resposta será validada por código: ${JSON.stringify(schema)}`;
+      const system = body.messages.find((message: { role: string }) => message.role === "system");
+      if (system && typeof system.content === "string") system.content += `\n${instruction}`;
+      else body.messages.unshift({ role: "system", content: instruction });
       await response.body?.cancel();
       request = { ...init, body: JSON.stringify(body) };
       response = await fetch(url, request);

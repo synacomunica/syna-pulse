@@ -60,3 +60,48 @@ test("Gemini schema complexity fallback retains schema and JSON validation contr
     globalThis.fetch = original;
   }
 });
+test("generic Gemini invalid-argument schema rejection retries as JSON with one system message", async () => {
+  const original = globalThis.fetch;
+  let calls = 0;
+  globalThis.fetch = async (url, init) => {
+    const body = JSON.parse(init.body);
+    if (++calls === 1)
+      return new Response(
+        JSON.stringify([
+          {
+            error: {
+              code: 400,
+              message: "Request contains an invalid argument.",
+              status: "INVALID_ARGUMENT",
+            },
+          },
+        ]),
+        { status: 400 },
+      );
+    assert.equal(body.response_format.type, "json_object");
+    assert.equal(body.messages.filter((m) => m.role === "system").length, 1);
+    assert.match(body.messages[0].content, /Preserve the evidence/);
+    assert.match(body.messages[0].content, /required/);
+    assert.equal(body.model, "configured-model");
+    return new Response("{}");
+  };
+  try {
+    const response = await aiRequest(
+      "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+      {
+        body: JSON.stringify({
+          model: "configured-model",
+          response_format: { json_schema: { schema: { required: ["actions"] } } },
+          messages: [
+            { role: "system", content: "Preserve the evidence" },
+            { role: "user", content: "diagnostic" },
+          ],
+        }),
+      },
+    );
+    assert.equal(response.status, 200);
+    assert.equal(calls, 2);
+  } finally {
+    globalThis.fetch = original;
+  }
+});

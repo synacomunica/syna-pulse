@@ -76,22 +76,48 @@ test("generation refuses unvalidated diagnostic without inserting anything", asy
   await assert.rejects(generatePlan(db, "diagnostic"), /valide/);
   assert.equal(db.inserted.length, 0);
 });
-test("missing AI key preserves facts and leaves unknown metrics null", async () => {
+test("missing AI key fails without inserting an empty plan", async () => {
   const previous = process.env.LOVABLE_API_KEY;
+  const gemini = process.env.GEMINI_API_KEY;
   delete process.env.LOVABLE_API_KEY;
+  delete process.env.GEMINI_API_KEY;
   try {
     const db = database("validado");
-    await generatePlan(db, "diagnostic");
-    const plan = db.inserted[0];
-    assert.match(plan.ai_warning, /IA não configurada/);
-    assert.equal(plan.content.resumo_estrategico, "Resumo revisado");
-    assert.equal(plan.content.notas_4p[0].nota, 7);
-    assert.equal(plan.content.jornada_5a.length, 5);
-    assert.ok(plan.content.jornada_5a.every((stage) => stage.nota === null));
-    assert.ok(plan.content.funil.every((stage) => stage.valor === null));
-    assert.equal(plan.content.acoes.length, 0);
+    await assert.rejects(generatePlan(db, "diagnostic"), /IA não configurada/);
+    assert.equal(db.inserted.length, 0);
   } finally {
     if (previous !== undefined) process.env.LOVABLE_API_KEY = previous;
+    if (gemini !== undefined) process.env.GEMINI_API_KEY = gemini;
+  }
+});
+
+test("provider rejects an expired key with 400 without saving a template", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalKey = process.env.GEMINI_API_KEY;
+  process.env.GEMINI_API_KEY = "test-only";
+  let calls = 0;
+  globalThis.fetch = async () => {
+    calls++;
+    return new Response(
+      JSON.stringify({
+        error: {
+          message: "API key expired. Please renew the API key.",
+          status: "INVALID_ARGUMENT",
+          details: [{ reason: "API_KEY_EXPIRED" }],
+        },
+      }),
+      { status: 400 },
+    );
+  };
+  try {
+    const db = database("validado");
+    await assert.rejects(generatePlan(db, "diagnostic"), /Chave de IA inválida ou expirada/);
+    assert.equal(db.inserted.length, 0);
+    assert.equal(calls, 1);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalKey === undefined) delete process.env.GEMINI_API_KEY;
+    else process.env.GEMINI_API_KEY = originalKey;
   }
 });
 

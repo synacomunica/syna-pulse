@@ -1,3 +1,4 @@
+import { aiFailure } from "./ai-error.server";
 import { aiRequest } from "./ai-request.server";
 import { diagnosticSources } from "./plan-sources.server";
 import { reviewPlanContent } from "./plan-quality";
@@ -100,8 +101,9 @@ export async function generatePlan(db: SupabaseClient<Database>, diagnosticId: s
   const geminiKey = process.env["GEMINI_API_KEY"]?.trim();
   const key = geminiKey || process.env["LOVABLE_API_KEY"];
   if (!key) {
-    warning =
-      "IA não configurada no servidor. Este rascunho contém apenas dados do diagnóstico; complete a estratégia manualmente antes de aprovar.";
+    throw new Error(
+      "IA não configurada no servidor. Configure GEMINI_API_KEY na Vercel antes de gerar o plano.",
+    );
   } else {
     try {
       const response = await aiRequest(
@@ -153,20 +155,13 @@ export async function generatePlan(db: SupabaseClient<Database>, diagnosticId: s
           }),
         },
       );
-      if (!response.ok) {
-        if (response.status === 429)
-          throw new Error(
-            "Limite de uso da IA atingido. Verifique a cota e o faturamento do provedor.",
-          );
-        if (response.status === 401 || response.status === 403)
-          throw new Error("Chave de IA recusada. Verifique a chave e as permissões na Vercel.");
-        throw new Error(`Serviço de IA indisponível (${response.status}).`);
-      }
+      if (!response.ok) throw await aiFailure(response);
       const result = await response.json();
       content = parseMarketingPlan(JSON.parse(result.choices?.[0]?.message?.content ?? "null"));
       if (
         !content.estrategia_central ||
         !content.objetivo_principal.descricao ||
+        !content.acoes.length ||
         content.acoes.some((a) => !a.objetivo || !a.estrategia || !a.kpi)
       )
         throw new Error("A IA retornou um plano incompleto.");
@@ -178,15 +173,16 @@ export async function generatePlan(db: SupabaseClient<Database>, diagnosticId: s
       warning =
         "Rascunho gerado por IA. Revise hipóteses, evidências, metas propostas e capacidade operacional antes da aprovação.";
     } catch (error) {
-      const detail =
+      if (
         error instanceof Error &&
-        /^(Limite de uso|Chave de IA recusada|Serviço de IA indisponível|A IA retornou)/.test(
+        /^(Limite de uso|Chave de IA|A solicitação|A IA|IA indisponível|Modelo de IA|Os dados)/.test(
           error.message,
         )
-          ? error.message
-          : "Resposta da IA inválida ou tempo limite excedido.";
-      warning = `${detail} Rascunho baseado apenas no diagnóstico; complete manualmente ou gere uma nova versão.`;
-      content = template;
+      )
+        throw error;
+      throw new Error(
+        "Não foi possível gerar um plano válido: a IA retornou uma resposta inválida ou excedeu o tempo limite. Tente novamente. Nenhum plano incompleto foi salvo.",
+      );
     }
   }
   const governance = governanceSchema.parse(content.governanca ?? {});
