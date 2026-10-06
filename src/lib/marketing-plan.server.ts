@@ -112,7 +112,8 @@ export async function generatePlan(db: SupabaseClient<Database>, diagnosticId: s
           : "https://ai.gateway.lovable.dev/v1/chat/completions",
         {
           method: "POST",
-          signal: AbortSignal.timeout(90000),
+          // Leave room for schema fallback and generation within Vercel's 5-minute limit.
+          signal: AbortSignal.timeout(240000),
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
           body: JSON.stringify({
             model: geminiKey

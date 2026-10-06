@@ -149,6 +149,12 @@ function MarketingPlanPage() {
         <p className="text-sm text-muted-foreground">
           Cada geração cria uma nova versão. As versões anteriores são preservadas.
         </p>
+        {generation.isPending && (
+          <p className="text-sm text-muted-foreground">A geração pode levar alguns minutos. Mantenha esta página aberta.</p>
+        )}
+        {generation.isError && (
+          <p role="alert" className="text-sm text-destructive">{generation.error.message}</p>
+        )}
         {diagnostics.data
           ?.filter((d) => d.status !== "validado")
           .map((d) => (
