@@ -53,11 +53,13 @@ export function ClientDialog({
           {mode === "create" ? "Novo cliente" : "Editar cliente"}
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Comece pelo negócio: quem é a empresa antes de qualquer canal.
+          Apenas o nome da empresa é obrigatório. Os demais dados podem ser preenchidos depois.
         </p>
 
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
-          {FIELDS.map((f) => (
+          {FIELDS.filter((f) =>
+            ["company_name", "segment", "contact_name", "email"].includes(f.name),
+          ).map((f) => (
             <label key={f.name} className="block">
               <span className="mb-1.5 block text-sm font-medium">{f.label}</span>
               <input
@@ -85,6 +87,28 @@ export function ClientDialog({
           </label>
         </div>
 
+        <details className="mt-5" open={mode === "edit"}>
+          <summary className="cursor-pointer font-medium">
+            Endereço, canais e dados adicionais (opcional)
+          </summary>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            {" "}
+            {FIELDS.filter(
+              (f) => !["company_name", "segment", "contact_name", "email"].includes(f.name),
+            ).map((f) => (
+              <label key={f.name} className="block">
+                <span className="mb-1.5 block text-sm font-medium">{f.label}</span>
+                <input
+                  className="input-base"
+                  name={f.name}
+                  type={f.type ?? "text"}
+                  required={f.required}
+                  defaultValue={(initial?.[f.name] as string) ?? ""}
+                />
+              </label>
+            ))}
+          </div>
+        </details>
         <label className="mt-4 block">
           <span className="mb-1.5 block text-sm font-medium">Observações</span>
           <textarea

@@ -100,29 +100,35 @@ function label(key: string) {
 export function MarketingPlanContentView({
   content,
   onChange,
+  sections,
 }: {
+  sections?: (keyof MarketingPlanContent)[];
   content: MarketingPlanContent;
   onChange?: ((value: MarketingPlanContent) => void) | undefined;
 }) {
   return (
     <div className="space-y-4">
-      {(Object.keys(PLAN_SECTION_LABELS) as (keyof MarketingPlanContent)[]).map((key) => (
-        <details key={key} className="surface-card p-5" open={key === "resumo_estrategico"}>
-          <summary className="cursor-pointer text-lg font-bold">{PLAN_SECTION_LABELS[key]}</summary>
-          <div className="mt-4">
-            <Field
-              schema={marketingPlanSchema.removeDefault().shape[key]}
-              value={content[key]}
-              name={PLAN_SECTION_LABELS[key]}
-              onChange={
-                onChange
-                  ? (value) => onChange(parseMarketingPlan({ ...content, [key]: value }))
-                  : undefined
-              }
-            />
-          </div>
-        </details>
-      ))}
+      {(sections ?? (Object.keys(PLAN_SECTION_LABELS) as (keyof MarketingPlanContent)[])).map(
+        (key) => (
+          <details key={key} className="surface-card p-5" open={key === "resumo_estrategico"}>
+            <summary className="cursor-pointer text-lg font-bold">
+              {PLAN_SECTION_LABELS[key]}
+            </summary>
+            <div className="mt-4">
+              <Field
+                schema={marketingPlanSchema.removeDefault().shape[key]}
+                value={content[key]}
+                name={PLAN_SECTION_LABELS[key]}
+                onChange={
+                  onChange
+                    ? (value) => onChange(parseMarketingPlan({ ...content, [key]: value }))
+                    : undefined
+                }
+              />
+            </div>
+          </details>
+        ),
+      )}
     </div>
   );
 }

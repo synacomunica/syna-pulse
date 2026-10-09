@@ -117,53 +117,67 @@ function MarketingPlanPage() {
         </div>
       }
     >
-      <section className="surface-card mb-5 flex flex-wrap items-center gap-3 p-4">
-        <label>
-          Diagnóstico validado
-          <select
-            className="input-base"
-            value={sourceId || diagnostics.data?.find((d) => d.status === "validado")?.id || ""}
-            onChange={(e) => setSourceId(e.target.value)}
+      <details
+        className="surface-card mb-5 p-4"
+        open={query.data?.plans.length === 0 || generation.isPending || generation.isError}
+      >
+        <summary className="cursor-pointer text-sm font-medium">
+          {query.data?.plans.length ? "Gerar uma nova versão com IA" : "Criar plano de marketing"}
+        </summary>
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <label>
+            Diagnóstico validado
+            <select
+              className="input-base"
+              value={sourceId || diagnostics.data?.find((d) => d.status === "validado")?.id || ""}
+              onChange={(e) => setSourceId(e.target.value)}
+            >
+              {!diagnostics.data?.some((d) => d.status === "validado") && (
+                <option value="">Nenhum diagnóstico validado</option>
+              )}
+              {diagnostics.data
+                ?.filter((d) => d.status === "validado")
+                .map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.title || formatDate(d.created_at)}
+                  </option>
+                ))}
+            </select>
+          </label>
+          <button
+            className="btn-primary"
+            disabled={
+              generation.isPending ||
+              dirty ||
+              !diagnostics.data?.some((d) => d.status === "validado")
+            }
+            onClick={() => generation.mutate()}
           >
-            {!diagnostics.data?.some((d) => d.status === "validado") && (
-              <option value="">Nenhum diagnóstico validado</option>
-            )}
-            {diagnostics.data
-              ?.filter((d) => d.status === "validado")
-              .map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.title || formatDate(d.created_at)}
-                </option>
-              ))}
-          </select>
-        </label>
-        <button
-          className="btn-primary"
-          disabled={
-            generation.isPending || dirty || !diagnostics.data?.some((d) => d.status === "validado")
-          }
-          onClick={() => generation.mutate()}
-        >
-          {generation.isPending ? "Gerando plano…" : "Gerar Plano de Marketing"}
-        </button>
-        <p className="text-sm text-muted-foreground">
-          Cada geração cria uma nova versão. As versões anteriores são preservadas.
-        </p>
-        {generation.isPending && (
-          <p className="text-sm text-muted-foreground">A geração pode levar alguns minutos. Mantenha esta página aberta.</p>
-        )}
-        {generation.isError && (
-          <p role="alert" className="text-sm text-destructive">{generation.error.message}</p>
-        )}
-        {diagnostics.data
-          ?.filter((d) => d.status !== "validado")
-          .map((d) => (
-            <Link key={d.id} className="btn-ghost" to="/diagnosticos/$id" params={{ id: d.id }}>
-              Revisar diagnóstico {d.title || formatDate(d.created_at)} →
-            </Link>
-          ))}
-        {diagnostics.isError && <p role="alert">{diagnostics.error.message}</p>}
-      </section>
+            {generation.isPending ? "Gerando plano…" : "Gerar Plano de Marketing"}
+          </button>
+          <p className="text-sm text-muted-foreground">
+            Cada geração cria uma nova versão. As versões anteriores são preservadas.
+          </p>
+          {generation.isPending && (
+            <p className="text-sm text-muted-foreground">
+              A geração pode levar alguns minutos. Mantenha esta página aberta.
+            </p>
+          )}
+          {generation.isError && (
+            <p role="alert" className="text-sm text-destructive">
+              {generation.error.message}
+            </p>
+          )}
+          {diagnostics.data
+            ?.filter((d) => d.status !== "validado")
+            .map((d) => (
+              <Link key={d.id} className="btn-ghost" to="/diagnosticos/$id" params={{ id: d.id }}>
+                Revisar diagnóstico {d.title || formatDate(d.created_at)} →
+              </Link>
+            ))}
+          {diagnostics.isError && <p role="alert">{diagnostics.error.message}</p>}
+        </div>
+      </details>
       {query.isPending ? (
         <p className="text-sm text-muted-foreground">Carregando planos...</p>
       ) : query.isError ? (
@@ -184,10 +198,12 @@ function MarketingPlanPage() {
           </p>
         </section>
       ) : (
-        <div className="grid gap-6 lg:grid-cols-[240px_minmax(0,1fr)]">
-          <aside className="surface-card self-start p-4">
-            <h2 className="mb-3 font-bold">Versões</h2>
-            <div className="space-y-2">
+        <div className="space-y-4">
+          <details className="surface-card p-4">
+            <summary className="cursor-pointer text-sm font-medium">
+              Histórico de versões · {query.data.plans.length} versões
+            </summary>
+            <div className="mt-3 grid gap-2 sm:grid-cols-3">
               {query.data.plans.map((plan) => (
                 <button
                   key={plan.id}
@@ -211,26 +227,31 @@ function MarketingPlanPage() {
                 </button>
               ))}
             </div>
-          </aside>
+          </details>
           {selected && (
             <div className="min-w-0 space-y-4">
-              <label className="block">
-                Comparar com
-                <select
-                  className="input-base"
-                  value={compareId}
-                  onChange={(e) => setCompareId(e.target.value)}
-                >
-                  <option value="">Escolher versão</option>
-                  {query.data.plans
-                    .filter((p) => p.id !== selected.id)
-                    .map((p) => (
-                      <option key={p.id} value={p.id}>
-                        Versão {p.version}
-                      </option>
-                    ))}
-                </select>
-              </label>
+              <details>
+                <summary className="cursor-pointer text-sm text-muted-foreground">
+                  Comparar versões
+                </summary>
+                <label className="mt-2 block">
+                  Comparar com
+                  <select
+                    className="input-base"
+                    value={compareId}
+                    onChange={(e) => setCompareId(e.target.value)}
+                  >
+                    <option value="">Escolher versão</option>
+                    {query.data.plans
+                      .filter((p) => p.id !== selected.id)
+                      .map((p) => (
+                        <option key={p.id} value={p.id}>
+                          Versão {p.version}
+                        </option>
+                      ))}
+                  </select>
+                </label>
+              </details>
               {compareId && query.data.plans.find((p) => p.id === compareId) && (
                 <div className="surface-card p-4">
                   <h2 className="font-bold">Comparação estratégica</h2>
@@ -300,6 +321,9 @@ function PlanEditor({
     parsed.success ? parsed.data : null,
   );
   const [editing, setEditing] = useState(false);
+  const [view, setView] = useState<"resumo" | "acoes" | "indicadores" | "revisao" | "documento">(
+    "resumo",
+  );
   const qc = useQueryClient();
 
   const channelRevision = useMutation({
@@ -373,7 +397,6 @@ function PlanEditor({
   });
   return (
     <div className="min-w-0 space-y-5" data-plan-dirty={dirty}>
-      {draft && <PlanGovernance plan={plan} content={draft} dirty={dirty} onSelect={onSelect} />}
       <section className="surface-card p-5">
         <h2 className="text-lg font-bold">
           Versão {plan.version} · {PLAN_STATUS_LABEL[plan.status] ?? plan.status}
@@ -391,7 +414,8 @@ function PlanEditor({
             Ver diagnóstico de origem
           </Link>
         )}
-        <div className="mt-4">
+        <details className="mt-4">
+          <summary className="cursor-pointer text-sm font-medium">Exportar documento</summary>
           <DocumentExport
             disabled={dirty || mutation.isPending || channelRevision.isPending || !draft}
             load={async () => {
@@ -426,7 +450,7 @@ function PlanEditor({
             atualize o sumário após abrir ou editar.{" "}
             {dirty ? "Salve suas alterações antes de exportar." : ""}
           </p>
-        </div>
+        </details>
         {plan.status === "rascunho_ia" && draft && (
           <div className="mt-4 flex flex-wrap gap-2">
             {editing ? (
@@ -457,7 +481,10 @@ function PlanEditor({
               <button
                 className="btn-ghost"
                 disabled={mutation.isPending}
-                onClick={() => setEditing(true)}
+                onClick={() => {
+                  setEditing(true);
+                  setView("documento");
+                }}
               >
                 Editar rascunho
               </button>
@@ -485,13 +512,61 @@ function PlanEditor({
           </div>
         )}
       </section>
-      {plan.ai_warning && (
-        <section role="alert" className="rounded-lg border border-warning/30 bg-warning/15 p-4">
-          <h2 className="font-semibold">Aviso da IA</h2>
-          <p className="mt-1 whitespace-pre-wrap text-sm">{plan.ai_warning}</p>
-        </section>
+      <nav aria-label="Áreas do plano" className="flex flex-wrap gap-2 border-b border-border pb-3">
+        {(
+          [
+            ["resumo", "Resumo"],
+            ["acoes", "Ações"],
+            ["indicadores", "Indicadores"],
+            ["revisao", "Revisão"],
+            ["documento", "Documento completo"],
+          ] as const
+        ).map(([key, label]) => (
+          <button
+            key={key}
+            type="button"
+            aria-pressed={view === key}
+            className={view === key ? "btn-primary" : "btn-ghost"}
+            onClick={() => setView(key)}
+          >
+            {label}
+          </button>
+        ))}
+      </nav>
+      {draft?.governanca && view !== "revisao" && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-muted p-4 text-sm">
+          <p>
+            {draft.governanca.checks.length + draft.governanca.issues.length
+              ? `${draft.governanca.checks.length + draft.governanca.issues.length} verificações e decisões para revisar`
+              : "Consulte as condições de execução antes de aprovar."}
+          </p>
+          <button className="btn-outline" onClick={() => setView("revisao")}>
+            Revisar pendências
+          </button>
+        </div>
       )}
-      {draft && isAdmin && (
+      {draft && view === "revisao" && (
+        <PlanGovernance plan={plan} content={draft} dirty={dirty} onSelect={onSelect} />
+      )}
+      {plan.ai_warning &&
+        (view === "revisao" ||
+          /indisponível|falha|inválida|rascunho baseado/i.test(plan.ai_warning)) && (
+          <section role="alert" className="rounded-lg border border-warning/30 bg-warning/15 p-4">
+            <h2 className="font-semibold">Aviso da IA</h2>
+            <p className="mt-1 whitespace-pre-wrap text-sm">{plan.ai_warning}</p>
+          </section>
+        )}
+      {draft && (
+        <div hidden={view === "revisao" || view === "documento"}>
+          <PlanOperations
+            plan={plan}
+            content={draft}
+            dirty={dirty}
+            view={view === "acoes" || view === "indicadores" ? view : "resumo"}
+          />
+        </div>
+      )}
+      {draft && isAdmin && view === "resumo" && (
         <>
           {plan.status === "aprovado" && (
             <p className="text-sm text-muted-foreground">
@@ -530,9 +605,8 @@ function PlanEditor({
           </section>
         </>
       )}
-      {draft && <PlanOperations plan={plan} content={draft} dirty={dirty} />}
       {draft ? (
-        <fieldset disabled={mutation.isPending}>
+        <fieldset hidden={view !== "documento"} disabled={mutation.isPending}>
           <MarketingPlanContentView
             content={draft}
             onChange={

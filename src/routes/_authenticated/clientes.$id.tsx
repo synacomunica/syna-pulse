@@ -33,7 +33,12 @@ function ClientDetail() {
   const navigate = useNavigate();
   const { isAdmin } = useAuth();
 
-  const { data, isLoading } = useQuery({
+  const {
+    data,
+    isLoading,
+    error: loadError,
+    refetch,
+  } = useQuery({
     queryKey: ["client", id],
     queryFn: async () => {
       const [client, diagnostics, actions] = await Promise.all([
@@ -45,6 +50,7 @@ function ClientDetail() {
           .order("created_at", { ascending: false }),
         supabase.from("action_items").select("*").eq("client_id", id),
       ]);
+      for (const result of [client, diagnostics, actions]) if (result.error) throw result.error;
       return {
         client: client.data,
         diagnostics: diagnostics.data ?? [],
@@ -145,6 +151,13 @@ function ClientDetail() {
     >
       {isLoading ? (
         <p className="text-sm text-muted-foreground">Carregando...</p>
+      ) : loadError ? (
+        <p role="alert">
+          Não foi possível carregar o cliente.{" "}
+          <button className="btn-ghost" onClick={() => void refetch()}>
+            Tentar novamente
+          </button>
+        </p>
       ) : !client ? (
         <p className="text-sm text-muted-foreground">Cliente não encontrado.</p>
       ) : (
@@ -244,6 +257,7 @@ function ClientDetail() {
               </div>
               <Link
                 to="/plano-de-acao"
+                search={{ clientId: id }}
                 className="mt-4 inline-block text-sm font-medium text-primary"
               >
                 Abrir quadro completo

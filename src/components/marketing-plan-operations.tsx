@@ -25,10 +25,12 @@ export function PlanOperations({
   plan,
   content,
   dirty,
+  view = "resumo",
 }: {
   plan: Tables<"marketing_plans">;
   content: MarketingPlanContent;
   dirty: boolean;
+  view?: "resumo" | "acoes" | "indicadores";
 }) {
   const qc = useQueryClient();
   const [days, setDays] = useState(90);
@@ -197,7 +199,7 @@ export function PlanOperations({
   cutoff.setDate(cutoff.getDate() + days);
   return (
     <div className="space-y-5">
-      <section className="surface-card space-y-3 p-5">
+      <section hidden={view !== "resumo"} className="surface-card space-y-3 p-5">
         <h2 className="text-lg font-bold">
           Visão do plano ·{" "}
           {overdue
@@ -245,16 +247,16 @@ export function PlanOperations({
               Excluir rascunho
             </button>
           )}
-          <Link className="btn-ghost" to="/plano-de-acao">
+          <Link className="btn-ghost" to="/plano-de-acao" search={{ clientId: plan.client_id }}>
             Abrir Plano de Ação
           </Link>
-          <Link className="btn-ghost" to="/performance">
+          <Link className="btn-ghost" to="/performance" search={{ clientId: plan.client_id }}>
             Abrir Performance
           </Link>
         </div>
         {query.isError && <p role="alert">{query.error.message}</p>}
       </section>
-      <section className="surface-card p-5">
+      <section hidden={view !== "indicadores"} className="surface-card p-5">
         <h2 className="mb-4 text-lg font-bold">Jornada do Cliente — 5A</h2>
         <div className="grid gap-3 md:grid-cols-5">
           {JOURNEY_STAGES.map((stage) => {
@@ -279,32 +281,55 @@ export function PlanOperations({
         </div>
         <p className="mt-4 text-sm">{content.gargalo_jornada.diagnostico}</p>
       </section>
-      <section className="surface-card p-5">
+      <section hidden={view !== "indicadores"} className="surface-card p-5">
         <h2 className="font-bold">Funil e eficiência</h2>
         <p className="text-sm text-muted-foreground">
           Contagens devem representar a mesma população e período. Não confundir notas com pessoas.
         </p>
-        <div className="my-3 flex flex-wrap gap-3">
-          {JOURNEY_STAGES.map((stage, i) => {
-            const value = content.funil.find((f) => f.etapa === stage)?.valor;
-            const previous = content.funil.find((f) => f.etapa === JOURNEY_STAGES[i - 1])?.valor;
-            return (
-              <div key={stage} className="rounded border p-3">
-                <strong>{stage.toUpperCase()}</strong>
-                <p>{value == null ? "Dados insuficientes" : value.toLocaleString("pt-BR")}</p>
-                {previous != null && previous > 0 && value != null && (
-                  <p>{((100 * value) / previous).toFixed(1)}% de passagem</p>
-                )}
-              </div>
-            );
-          })}
-        </div>
-        <p>
-          PAR: {ratios.par ?? "Dados insuficientes"} · BAR: {ratios.bar ?? "Dados insuficientes"}
-        </p>
-        <p className="text-sm">{content.par_bar.observacao}</p>
+        {content.funil.some((f) => f.valor != null) ? (
+          <>
+            <div className="my-3 flex flex-wrap gap-3">
+              {JOURNEY_STAGES.map((stage, i) => {
+                const value = content.funil.find((f) => f.etapa === stage)?.valor;
+                const previous = content.funil.find(
+                  (f) => f.etapa === JOURNEY_STAGES[i - 1],
+                )?.valor;
+                return (
+                  <div key={stage} className="rounded border p-3">
+                    <strong>{stage.toUpperCase()}</strong>
+                    <p>{value == null ? "Dados insuficientes" : value.toLocaleString("pt-BR")}</p>
+                    {previous != null && previous > 0 && value != null && (
+                      <p>{((100 * value) / previous).toFixed(1)}% de passagem</p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            <p>
+              PAR: {ratios.par ?? "Dados insuficientes"} · BAR:{" "}
+              {ratios.bar ?? "Dados insuficientes"}
+            </p>
+            <p className="text-sm">{content.par_bar.observacao}</p>
+          </>
+        ) : (
+          <div className="mt-3 space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Ainda não há contagens comparáveis para calcular o funil.
+            </p>
+            <Link className="btn-outline" to="/performance" search={{ clientId: plan.client_id }}>
+              Registrar resultados
+            </Link>
+            <details className="text-sm">
+              <summary className="cursor-pointer">Quais dados são necessários?</summary>
+              <p className="mt-2">
+                Contagens de cada etapa para a mesma população e período. Valores desconhecidos não
+                são tratados como zero.
+              </p>
+            </details>
+          </div>
+        )}
       </section>
-      <section className="surface-card space-y-3 p-5">
+      <section hidden={view !== "acoes"} className="surface-card space-y-3 p-5">
         <h2 className="font-bold">Plano tático</h2>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
@@ -420,7 +445,7 @@ export function PlanOperations({
           <p className="text-sm">Valide o plano antes de enviar para execução.</p>
         )}
       </section>
-      <section className="surface-card space-y-3 p-5">
+      <section hidden={view !== "indicadores"} className="surface-card space-y-3 p-5">
         <h2 className="font-bold">Metas e Performance</h2>
         {executionGoals.map(({ goal, value, progress }) => (
           <div key={goal.id} className="rounded border p-3">

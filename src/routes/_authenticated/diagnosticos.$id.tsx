@@ -188,6 +188,7 @@ function DiagnosticDetail() {
 
   return (
     <AppShell
+      clientId={diag.client_id}
       title={client?.company_name ?? "Diagnóstico"}
       subtitle={`${DIAGNOSTIC_STATUS_LABEL[diag.status]} · criado em ${formatDate(diag.created_at)}`}
       actions={

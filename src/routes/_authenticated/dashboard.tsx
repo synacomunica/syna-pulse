@@ -23,7 +23,7 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 });
 
 function Dashboard() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["dashboard"],
     queryFn: async () => {
       const [clients, diagnostics, actions, scores] = await Promise.all([
@@ -35,6 +35,8 @@ function Dashboard() {
         supabase.from("action_items").select("id, status, priority, title, client_id, due_date"),
         supabase.from("pillar_scores").select("pillar, final_score"),
       ]);
+      for (const result of [clients, diagnostics, actions, scores])
+        if (result.error) throw result.error;
       return {
         clients: clients.data ?? [],
         diagnostics: diagnostics.data ?? [],
@@ -65,6 +67,17 @@ function Dashboard() {
     .filter((p) => p.avg != null)
     .sort((a, b) => Number(a.avg) - Number(b.avg))[0];
 
+  if (error)
+    return (
+      <AppShell title="Dashboard">
+        <div role="alert" className="surface-card p-5">
+          Não foi possível carregar os dados.{" "}
+          <button className="btn-ghost" onClick={() => void refetch()}>
+            Tentar novamente
+          </button>
+        </div>
+      </AppShell>
+    );
   return (
     <AppShell title="Dashboard" subtitle="Visão geral da operação estratégica da Syna">
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

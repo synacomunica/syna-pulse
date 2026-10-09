@@ -1,3 +1,5 @@
+import { Link } from "@tanstack/react-router";
+import { SourceList } from "@/components/source-list";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -90,20 +92,25 @@ export function PlanGovernance({
       </button>
       {g && (
         <>
-          <p className="text-sm">
-            Regras {g.instructionVersion} · validações {g.validationVersion}
-          </p>
-          <details open={g.checks.length > 0}>
-            <summary>Pendências e verificações ({g.checks.length})</summary>
+          <Link className="btn-outline" to="/clientes/$id" params={{ id: plan.client_id }}>
+            Conferir contrato e entregas
+          </Link>
+          <details>
+            <summary>Pendências e decisões ({g.checks.length + g.issues.length})</summary>
             {g.checks.map((c, i) => (
               <p className="border-l-2 pl-3 my-2" key={i}>
                 <strong>{c.severity === "bloqueio" ? "Decisão necessária" : "Atenção"}:</strong>{" "}
-                {c.message} {c.actionId && `Ação: ${c.actionId}`}
+                {c.message}{" "}
+                {c.actionId &&
+                  `Ação: ${g.actions.find((a) => a.actionId === c.actionId)?.title || "Consultar ações abaixo"}`}
               </p>
             ))}
             {g.issues.map((i) => (
               <p key={i.id}>
-                {i.priority}: {i.question} {i.resolution && ` — Decisão: ${i.resolution}`}
+                <strong>
+                  {i.priority === "impede_decisao" ? "Decisão necessária" : "Complemento opcional"}:
+                </strong>{" "}
+                {i.question} {i.resolution && ` — Decisão: ${i.resolution}`}
               </p>
             ))}
           </details>
@@ -112,38 +119,35 @@ export function PlanGovernance({
             {g.actions.map((a) => (
               <article key={a.actionId} className="border-b py-3">
                 <h3 className="font-semibold">
-                  {a.title} · {a.release}
+                  {a.title} · {a.release.replaceAll("_", " ")}
                 </h3>
                 <p>
                   {a.problem} → {a.deliverable}
                 </p>
                 <p>
-                  Escopo: {a.scopeClass} · Responsável: {a.owner || "a definir"}
+                  Escopo: {a.scopeClass.replaceAll("_", " ")} · Responsável:{" "}
+                  {a.owner || "a definir"}
                 </p>
                 <p>
                   Início: {a.startCondition || "a confirmar"} · {a.relativeWindow || a.startDate} ·
-                  Pré-requisitos: {a.prerequisites.join(", ") || "nenhum informado"}
+                  Pré-requisitos:{" "}
+                  {a.prerequisites
+                    .map(
+                      (id) =>
+                        g.actions.find((item) => item.actionId === id)?.title || "Ação a conferir",
+                    )
+                    .join(", ") || "nenhum informado"}
                 </p>
                 <p>
-                  Recursos: {a.resources} · Conclusão: {a.completion} · Indicador: {a.metricId}
+                  Recursos: {a.resources} · Conclusão: {a.completion} · Indicador:{" "}
+                  {g.indicators.find((i) => i.id === a.metricId)?.name || "A confirmar"}
                 </p>
-                <p>Fontes: {a.evidenceIds.join(", ")}</p>
               </article>
             ))}
           </details>
           <details>
             <summary>Consultar fontes e referências</summary>
-            {g.sources.map((s) => (
-              <article key={s.id} className="border-b py-2 text-sm">
-                <strong>
-                  {s.id} · {s.kind}
-                </strong>
-                <p>
-                  {s.reference} · {s.date}
-                </p>
-                <p className="whitespace-pre-wrap break-words">{s.value}</p>
-              </article>
-            ))}
+            <SourceList sources={g.sources} />
           </details>
         </>
       )}

@@ -1,3 +1,4 @@
+import { SourceList } from "@/components/source-list";
 import { useState } from "react";
 import { Link, useBlocker } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -492,8 +493,10 @@ function CycleEditor({
                 {directionSentence(w.direction)}
               </p>
             </section>
-            <section className="surface-card p-5 space-y-3">
-              <h3 className="font-bold">Base estratégica do sistema</h3>
+            <details className="surface-card p-5 space-y-3">
+              <summary className="cursor-pointer font-bold">
+                Consultar estratégia e informações do cliente
+              </summary>
               <p className="text-sm">
                 As sugestões iniciais vêm do plano salvo. Confirme produto, contrato e capacidade
                 para este mês.
@@ -540,13 +543,7 @@ function CycleEditor({
                         dias ({i.deadlineBasis}) · {i.capture}
                       </p>
                     ))}
-                    {context.data.sources.map((s) => (
-                      <p key={s.id} className="text-sm border-b py-2">
-                        <strong>{s.reference}</strong>
-                        <br />
-                        {s.value}
-                      </p>
-                    ))}
+                    <SourceList sources={context.data.sources} />
                   </details>
                 </>
               )}
@@ -557,7 +554,7 @@ function CycleEditor({
               >
                 Consultar plano e análises completos
               </Link>
-            </section>
+            </details>
             {previousResult?.success && (
               <section className="surface-card p-5 space-y-2">
                 <h3 className="font-bold">Aprendizados de {previous?.month}</h3>
@@ -633,11 +630,11 @@ function CycleEditor({
               </p>
             </section>
             {w.topics.map((t) => (
-              <section key={t.id} className="surface-card p-5 space-y-3">
-                <h3 className="font-bold">
+              <details key={t.id} className="surface-card p-5 space-y-3">
+                <summary className="cursor-pointer font-bold">
                   {t.theme || "Nova pauta"}{" "}
                   <span className="text-sm text-muted-foreground">· {stages[t.status]}</span>
-                </h3>
+                </summary>
                 {t.status !== "banco" ? (
                   <>
                     <p>{t.approach}</p>
@@ -708,7 +705,7 @@ function CycleEditor({
                     </button>
                   </>
                 )}
-              </section>
+              </details>
             ))}
           </>
         )}

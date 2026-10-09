@@ -9,6 +9,8 @@ import { ACTION_STATUS_LABEL, PILLARS, PILLAR_LABEL, PRIORITY_LABEL } from "@/li
 import { formatDate } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/plano-de-acao")({
+  validateSearch: (s: Record<string, unknown>): { clientId?: string } =>
+    typeof s["clientId"] === "string" ? { clientId: s["clientId"] } : {},
   head: () => ({
     meta: [
       { title: "Plano de Ação — Syna Marketing Diagnostic" },
@@ -40,11 +42,13 @@ type ActionRow = {
 
 function ActionPlan() {
   const qc = useQueryClient();
-  const [clientFilter, setClientFilter] = useState("");
+  const { clientId: clientFilter = "" } = Route.useSearch();
+  const navigate = Route.useNavigate();
+  const setClientFilter = (clientId: string) => void navigate({ search: { clientId } });
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<ActionRow | null>(null);
 
-  const { data } = useQuery({
+  const { data, error, refetch } = useQuery({
     queryKey: ["actions"],
     queryFn: async () => {
       const [actions, clients] = await Promise.all([
@@ -111,6 +115,17 @@ function ActionPlan() {
   );
   const clientName = (id: string) => clients.find((c) => c.id === id)?.company_name ?? "—";
 
+  if (error)
+    return (
+      <AppShell title="Plano de Ação">
+        <div role="alert" className="surface-card p-5">
+          Não foi possível carregar os dados.{" "}
+          <button className="btn-ghost" onClick={() => void refetch()}>
+            Tentar novamente
+          </button>
+        </div>
+      </AppShell>
+    );
   return (
     <AppShell
       title="Plano de Ação"
@@ -129,6 +144,7 @@ function ActionPlan() {
     >
       <select
         className="input-base w-auto"
+        aria-label="Cliente das ações"
         value={clientFilter}
         onChange={(e) => setClientFilter(e.target.value)}
       >

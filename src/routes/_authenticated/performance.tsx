@@ -18,6 +18,8 @@ import { METRICS, metricDef } from "@/lib/pillars";
 import { formatMetric, monthLabel } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/performance")({
+  validateSearch: (s: Record<string, unknown>): { clientId?: string } =>
+    typeof s["clientId"] === "string" ? { clientId: s["clientId"] } : {},
   head: () => ({
     meta: [
       { title: "Performance — Syna Marketing Diagnostic" },
@@ -35,25 +37,36 @@ export const Route = createFileRoute("/_authenticated/performance")({
 
 function Performance() {
   const qc = useQueryClient();
-  const [clientId, setClientId] = useState("");
+  const { clientId = "" } = Route.useSearch();
+  const navigate = Route.useNavigate();
+  const setClientId = (clientId: string) => void navigate({ search: { clientId } });
   const [metricKey, setMetricKey] = useState("faturamento");
   const [open, setOpen] = useState(false);
   const [goalOpen, setGoalOpen] = useState(false);
 
-  const { data: clients = [] } = useQuery({
+  const {
+    data: clients = [],
+    error: clientsError,
+    refetch: refetchClients,
+  } = useQuery({
     queryKey: ["clients-min"],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("clients")
         .select("id, company_name")
         .order("company_name");
+      if (error) throw error;
       return data ?? [];
     },
   });
 
-  const activeClient = clientId || clients[0]?.id || "";
+  const activeClient = clientId;
 
-  const { data } = useQuery({
+  const {
+    data,
+    error: valuesError,
+    refetch,
+  } = useQuery({
     queryKey: ["performance", activeClient],
     enabled: Boolean(activeClient),
     queryFn: async () => {
@@ -65,6 +78,7 @@ function Performance() {
           .order("period_date"),
         supabase.from("goals").select("*").eq("client_id", activeClient),
       ]);
+      for (const result of [values, goals]) if (result.error) throw result.error;
       return { values: values.data ?? [], goals: goals.data ?? [] };
     },
   });
@@ -102,14 +116,16 @@ function Performance() {
   const saveGoal = useMutation({
     mutationFn: async (p: Record<string, string>) => {
       const metric = p["metric_key"]!;
-      await supabase.from("goals").delete().eq("client_id", activeClient).eq("metric_key", metric);
-      const { error } = await supabase.from("goals").insert({
-        client_id: activeClient,
-        metric_key: metric,
-        target_value: Number(p["target_value"]),
-        period_start: p["period_start"] ? `${p["period_start"]}-01` : null,
-        period_end: p["period_end"] ? `${p["period_end"]}-01` : null,
-      });
+      const { error } = await supabase.from("goals").upsert(
+        {
+          client_id: activeClient,
+          metric_key: metric,
+          target_value: Number(p["target_value"]),
+          period_start: p["period_start"] ? `${p["period_start"]}-01` : null,
+          period_end: p["period_end"] ? `${p["period_end"]}-01` : null,
+        },
+        { onConflict: "client_id,metric_key" },
+      );
       if (error) throw error;
     },
     onSuccess: () => {
@@ -149,12 +165,33 @@ function Performance() {
         </div>
       }
     >
+      {(clientsError || valuesError) && (
+        <p role="alert" className="mb-4 text-destructive">
+          Não foi possível carregar os resultados.{" "}
+          <button
+            onClick={() => {
+              void refetchClients();
+              if (activeClient) void refetch();
+            }}
+            className="btn-ghost"
+          >
+            Tentar novamente
+          </button>
+        </p>
+      )}
+      {!activeClient && (
+        <p className="mb-4 text-muted-foreground">
+          Escolha o cliente para acompanhar os resultados.
+        </p>
+      )}
       <div className="flex flex-wrap gap-3">
         <select
+          aria-label="Cliente dos resultados"
           className="input-base w-auto"
           value={activeClient}
           onChange={(e) => setClientId(e.target.value)}
         >
+          <option value="">Selecione um cliente</option>
           {clients.map((c) => (
             <option key={c.id} value={c.id}>
               {c.company_name}
@@ -174,119 +211,120 @@ function Performance() {
         </select>
       </div>
 
-      <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {METRICS.slice(0, 8).map((m) => {
-          const goal = data?.goals.find((g) => g.metric_key === m.key);
-          const value = latestByMetric.get(m.key) ?? null;
-          return (
-            <div key={m.key} className="surface-card p-5">
-              <p className="text-sm text-muted-foreground">{m.label}</p>
-              <p className="mt-2 text-display text-2xl">
-                {value == null ? "—" : formatMetric(value, m.format)}
-              </p>
-              {goal ? (
-                <>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Meta: {formatMetric(Number(goal.target_value), m.format)}
-                  </p>
-                  <div className="mt-2 h-1.5 rounded-full bg-muted">
-                    <div
-                      className="h-1.5 rounded-full bg-primary"
-                      style={{
-                        width: `${Math.min(
-                          100,
-                          Math.round(((value ?? 0) / Number(goal.target_value || 1)) * 100),
-                        )}%`,
-                      }}
-                    />
-                  </div>
-                </>
-              ) : null}
-            </div>
-          );
-        })}
-      </div>
-
-      <section className="surface-card mt-6 p-6">
-        <h2 className="text-lg font-bold">{metricDef(metricKey).label} ao longo do tempo</h2>
-        {series.length === 0 ? (
-          <p className="mt-4 text-sm text-muted-foreground">
-            Nenhum registro para este indicador ainda.
-          </p>
-        ) : (
-          <div className="mt-4 h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={series}>
-                <CartesianGrid stroke="var(--border)" vertical={false} />
-                <XAxis dataKey="mes" tick={{ fill: "var(--muted-foreground)", fontSize: 12 }} />
-                <YAxis tick={{ fill: "var(--muted-foreground)", fontSize: 12 }} />
-                <Tooltip
-                  contentStyle={{
-                    background: "var(--card)",
-                    border: "1px solid var(--border)",
-                    borderRadius: 12,
-                  }}
-                  formatter={(v: number) => formatMetric(v, metricDef(metricKey).format)}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="valor"
-                  stroke="var(--primary)"
-                  strokeWidth={2.5}
-                  dot={{ r: 3 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-      </section>
-
-      <section className="surface-card mt-6 p-6">
-        <h2 className="text-lg font-bold">Registros deste cliente</h2>
-        {(data?.values ?? []).length === 0 ? (
-          <p className="mt-4 text-sm text-muted-foreground">
-            Nenhum indicador registrado ainda. Use “Registrar indicador” para lançar o primeiro
-            valor.
-          </p>
-        ) : (
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-xs uppercase text-muted-foreground">
-                  <th className="pb-2">Mês</th>
-                  <th className="pb-2">Indicador</th>
-                  <th className="pb-2">Valor</th>
-                  <th className="pb-2" />
-                </tr>
-              </thead>
-              <tbody>
-                {[...(data?.values ?? [])].reverse().map((v) => (
-                  <tr key={v.id} className="border-t border-border">
-                    <td className="py-2">{monthLabel(v.period_date)}</td>
-                    <td className="py-2">{metricDef(v.metric_key).label}</td>
-                    <td className="py-2">
-                      {formatMetric(Number(v.value), metricDef(v.metric_key).format)}
-                    </td>
-                    <td className="py-2 text-right">
-                      <button
-                        type="button"
-                        aria-label="Excluir registro"
-                        className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-destructive"
-                        onClick={() => {
-                          if (confirm("Excluir este registro?")) removeValue.mutate(v.id);
+      <div hidden={!activeClient || Boolean(clientsError || valuesError)}>
+        <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {METRICS.slice(0, 8).map((m) => {
+            const goal = data?.goals.find((g) => g.metric_key === m.key);
+            const value = latestByMetric.get(m.key) ?? null;
+            return (
+              <div key={m.key} className="surface-card p-5">
+                <p className="text-sm text-muted-foreground">{m.label}</p>
+                <p className="mt-2 text-display text-2xl">
+                  {value == null ? "—" : formatMetric(value, m.format)}
+                </p>
+                {goal ? (
+                  <>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Meta: {formatMetric(Number(goal.target_value), m.format)}
+                    </p>
+                    <div className="mt-2 h-1.5 rounded-full bg-muted">
+                      <div
+                        className="h-1.5 rounded-full bg-primary"
+                        style={{
+                          width: `${Math.min(
+                            100,
+                            Math.round(((value ?? 0) / Number(goal.target_value || 1)) * 100),
+                          )}%`,
                         }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
+                      />
+                    </div>
+                  </>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
 
+        <section className="surface-card mt-6 p-6">
+          <h2 className="text-lg font-bold">{metricDef(metricKey).label} ao longo do tempo</h2>
+          {series.length === 0 ? (
+            <p className="mt-4 text-sm text-muted-foreground">
+              Nenhum registro para este indicador ainda.
+            </p>
+          ) : (
+            <div className="mt-4 h-72">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={series}>
+                  <CartesianGrid stroke="var(--border)" vertical={false} />
+                  <XAxis dataKey="mes" tick={{ fill: "var(--muted-foreground)", fontSize: 12 }} />
+                  <YAxis tick={{ fill: "var(--muted-foreground)", fontSize: 12 }} />
+                  <Tooltip
+                    contentStyle={{
+                      background: "var(--card)",
+                      border: "1px solid var(--border)",
+                      borderRadius: 12,
+                    }}
+                    formatter={(v: number) => formatMetric(v, metricDef(metricKey).format)}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="valor"
+                    stroke="var(--primary)"
+                    strokeWidth={2.5}
+                    dot={{ r: 3 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </section>
+
+        <section className="surface-card mt-6 p-6">
+          <h2 className="text-lg font-bold">Registros deste cliente</h2>
+          {(data?.values ?? []).length === 0 ? (
+            <p className="mt-4 text-sm text-muted-foreground">
+              Nenhum indicador registrado ainda. Use “Registrar indicador” para lançar o primeiro
+              valor.
+            </p>
+          ) : (
+            <div className="mt-4 overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-xs uppercase text-muted-foreground">
+                    <th className="pb-2">Mês</th>
+                    <th className="pb-2">Indicador</th>
+                    <th className="pb-2">Valor</th>
+                    <th className="pb-2" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {[...(data?.values ?? [])].reverse().map((v) => (
+                    <tr key={v.id} className="border-t border-border">
+                      <td className="py-2">{monthLabel(v.period_date)}</td>
+                      <td className="py-2">{metricDef(v.metric_key).label}</td>
+                      <td className="py-2">
+                        {formatMetric(Number(v.value), metricDef(v.metric_key).format)}
+                      </td>
+                      <td className="py-2 text-right">
+                        <button
+                          type="button"
+                          aria-label="Excluir registro"
+                          className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-destructive"
+                          onClick={() => {
+                            if (confirm("Excluir este registro?")) removeValue.mutate(v.id);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      </div>
       {open ? (
         <div className="fixed inset-0 z-50 grid place-items-center bg-foreground/40 p-4">
           <form

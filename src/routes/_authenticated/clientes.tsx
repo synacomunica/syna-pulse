@@ -209,7 +209,7 @@ function ClientsPage() {
                         aria-label={`Editar ${c.company_name}`}
                         onClick={() => setEditing(c as unknown as Record<string, string | null>)}
                       >
-                        <Pencil className="h-3.5 w-3.5" />
+                        <Pencil className="h-3.5 w-3.5" /> Editar
                       </button>
                       {isAdmin ? (
                         <button
@@ -225,7 +225,7 @@ function ClientsPage() {
                               remove.mutate(c.id);
                           }}
                         >
-                          <Trash2 className="h-3.5 w-3.5" />
+                          <Trash2 className="h-3.5 w-3.5" /> Excluir
                         </button>
                       ) : null}
                     </div>

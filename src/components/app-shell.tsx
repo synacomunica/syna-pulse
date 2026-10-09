@@ -39,7 +39,9 @@ export function AppShell({
   subtitle,
   actions,
   children,
+  clientId: explicitClientId,
 }: {
+  clientId?: string;
   title: string;
   subtitle?: string | undefined;
   actions?: ReactNode | undefined;
@@ -48,7 +50,12 @@ export function AppShell({
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   const { fullName, isAdmin, user } = useAuth();
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const location = useRouterState({ select: (s) => s.location });
+  const pathname = location.pathname;
+  const clientId =
+    explicitClientId ||
+    pathname.match(/^\/(?:clientes|plano-de-marketing)\/([^/]+)$/)?.[1] ||
+    (location.search as { clientId?: string }).clientId;
 
   const signOut = async () => {
     await supabase.auth.signOut();
@@ -57,12 +64,31 @@ export function AppShell({
 
   const nav = (
     <nav className="flex flex-1 flex-col gap-0.5 px-3">
+      {clientId && (
+        <Link
+          className="mb-3 rounded-lg border border-sidebar-border px-3 py-2 text-sm text-sidebar-foreground"
+          to="/clientes/$id"
+          params={{ id: clientId }}
+        >
+          ← Ficha deste cliente
+        </Link>
+      )}
       {NAV.map((item) => {
         const active = pathname === item.to || pathname.startsWith(`${item.to}/`);
         return (
           <Link
             key={item.to}
-            to={item.to}
+            to={
+              clientId && item.to === "/plano-de-marketing"
+                ? "/plano-de-marketing/$clientId"
+                : item.to
+            }
+            params={clientId ? { clientId } : {}}
+            search={
+              clientId && ["/performance", "/plano-de-acao", "/conteudos"].includes(item.to)
+                ? { clientId }
+                : {}
+            }
             onClick={() => setOpen(false)}
             className={cn(
               "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
