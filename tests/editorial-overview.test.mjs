@@ -4,6 +4,7 @@ import { compile } from "./compile.mjs";
 const { calendarDays, csvCell, scheduleCsv } = await import(compile("editorial-overview"));
 const { newTopic, topicSchema } = await import(compile("editorial-workflow"));
 test("calendar respects leap years and weekday offset without timezone shifts", () => {
+  assert.deepEqual(calendarDays(""), []);
   const days = calendarDays("2028-02");
   assert.equal(days.filter(Boolean).length, 29);
   assert.equal(days[0], null);

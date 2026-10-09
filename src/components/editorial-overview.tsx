@@ -178,7 +178,7 @@ export function EditorialOverview({
             </div>
           </div>
         </div>
-        {!topics.length ? (
+        {!topics.length && view === "lista" ? (
           <div className="p-10 text-center">
             <FileText className="w-8 h-8 mx-auto mb-3 text-violet-400" />
             <h4 className="font-semibold">

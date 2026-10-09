@@ -1,5 +1,6 @@
 import type { Topic } from "./editorial-workflow";
 export function calendarDays(month: string) {
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) return [];
   const [year, m] = month.split("-").map(Number);
   const start = new Date(Date.UTC(year!, m! - 1, 1));
   const count = new Date(Date.UTC(year!, m!, 0)).getUTCDate();
