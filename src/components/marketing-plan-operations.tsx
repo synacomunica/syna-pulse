@@ -18,7 +18,7 @@ import {
   journeyStatus,
   funnelRatios,
 } from "@/lib/marketing-plan-metrics";
-import { METRICS, FOUR_PS } from "@/lib/pillars";
+import { METRICS, FOUR_PS, PILLAR_LABEL } from "@/lib/pillars";
 import { formatMetric } from "@/lib/format";
 
 export function PlanOperations({
@@ -214,8 +214,10 @@ export function PlanOperations({
           <strong>Objetivo:</strong> {content.objetivo_principal.descricao || "A definir"}
         </p>
         <p>
-          <strong>Gargalo:</strong> {content.relacao_4p_5a.pilar || "A investigar"} →{" "}
-          {content.gargalo_jornada.etapa || "Dados insuficientes"}
+          <strong>Gargalo:</strong>{" "}
+          {PILLAR_LABEL[content.relacao_4p_5a.pilar as keyof typeof PILLAR_LABEL] || "A investigar"}{" "}
+          →{" "}
+          {STAGE_LABEL[content.gargalo_jornada.etapa as keyof typeof STAGE_LABEL] || "A investigar"}
         </p>
         <p>
           <strong>Estratégia:</strong> {content.estrategia_central || "A definir"}
@@ -283,9 +285,7 @@ export function PlanOperations({
       </section>
       <section hidden={view !== "indicadores"} className="surface-card p-5">
         <h2 className="font-bold">Funil e eficiência</h2>
-        <p className="text-sm text-muted-foreground">
-          Contagens devem representar a mesma população e período. Não confundir notas com pessoas.
-        </p>
+
         {content.funil.some((f) => f.valor != null) ? (
           <>
             <div className="my-3 flex flex-wrap gap-3">
