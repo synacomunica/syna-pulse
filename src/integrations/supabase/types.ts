@@ -180,6 +180,24 @@ export type Database = {
           },
         ];
       };
+      marketing_scenarios: {
+        Row: {
+          id: string;
+          client_id: string;
+          content: Json;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          client_id: string;
+          content: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: { content?: Json; updated_at?: string };
+        Relationships: [];
+      };
       clients: {
         Row: {
           category: string | null;

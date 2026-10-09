@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
+  Calculator,
   LayoutDashboard,
   Users,
   Stethoscope,
@@ -26,6 +27,7 @@ const NAV = [
   { to: "/diagnosticos", label: "Diagnósticos", icon: Stethoscope },
   { to: "/formularios", label: "Formulários", icon: ClipboardList },
   { to: "/matriz", label: "Matriz 4P", icon: Grid2x2 },
+  { to: "/metas", label: "Metas e cenários", icon: Calculator },
   { to: "/performance", label: "Performance", icon: TrendingUp },
   { to: "/plano-de-marketing", label: "Plano de Marketing", icon: ListChecks },
   { to: "/conteudos", label: "Conteúdos", icon: ClipboardList },
@@ -85,7 +87,8 @@ export function AppShell({
             }
             params={clientId ? { clientId } : {}}
             search={
-              clientId && ["/performance", "/plano-de-acao", "/conteudos"].includes(item.to)
+              clientId &&
+              ["/performance", "/plano-de-acao", "/conteudos", "/metas"].includes(item.to)
                 ? { clientId }
                 : {}
             }

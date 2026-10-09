@@ -1,3 +1,4 @@
+import { EditorialOverview } from "@/components/editorial-overview";
 import { SourceList } from "@/components/source-list";
 import { useState } from "react";
 import { Link, useBlocker } from "@tanstack/react-router";
@@ -218,7 +219,8 @@ function CycleEditor({
   );
   const [revision, setRevision] = useState(cycle?.updated_at);
   const [dirty, setDirty] = useState(false);
-  const [tab, setTab] = useState(0);
+  const [tab, setTab] = useState(-1);
+  const [focusedTopic, setFocusedTopic] = useState<string | null>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [document, setDocument] = useState<ScheduleDocument | null>(null);
   const { isAdmin } = useAuth();
@@ -343,7 +345,7 @@ function CycleEditor({
             <h2 className="text-lg font-bold">Planejamento de {w.month}</h2>
             <p className="text-sm text-muted-foreground">
               Plano v{plan.version} · {selected.length}/{w.direction.contentLimit} conteúdos ·{" "}
-              {dirty ? "Alterações não salvas" : "Salvo"}
+              {dirty ? "Alterações não salvas" : cycle ? "Salvo" : "Novo ciclo"}
             </p>
           </div>
           {isAdmin && (
@@ -401,19 +403,59 @@ function CycleEditor({
           </p>
         ))}
         <div className="flex flex-wrap gap-2" role="tablist" aria-label="Etapas da metodologia">
+          <button
+            role="tab"
+            aria-selected={tab === -1}
+            className={tab === -1 ? "btn-primary" : "btn-outline"}
+            onClick={() => setTab(-1)}
+          >
+            Cronograma
+          </button>
           {tabs.map((label, i) => (
             <button
               key={label}
               role="tab"
               aria-selected={tab === i}
               className={tab === i ? "btn-primary" : "btn-outline"}
-              onClick={() => setTab(i)}
+              onClick={() => {
+                setTab(i);
+                setFocusedTopic(null);
+              }}
             >
               {i + 1}. {label}
             </button>
           ))}
         </div>
       </section>
+      {tab === -1 && (
+        <EditorialOverview
+          workflow={w}
+          canEdit={isAdmin && !busy}
+          onAdd={() => {
+            const t = { ...newTopic(), audience: w.direction.audience };
+            change({ ...w, topics: [...w.topics, t] });
+            setFocusedTopic(t.id);
+            setTab(1);
+          }}
+          onEdit={(t) => {
+            setFocusedTopic(t.id);
+            setTab(
+              t.status === "banco"
+                ? 1
+                : t.status === "selecionada"
+                  ? 2
+                  : t.status === "publicado" || t.status === "peca_aprovada"
+                    ? 4
+                    : 3,
+            );
+          }}
+        />
+      )}
+      {focusedTopic && tab >= 0 && (
+        <button className="btn-outline" onClick={() => setFocusedTopic(null)}>
+          Ver todas as pautas desta etapa
+        </button>
+      )}
       <fieldset
         disabled={!isAdmin || busy}
         className="space-y-4"
@@ -424,6 +466,9 @@ function CycleEditor({
           <>
             <section className="surface-card p-5 space-y-4">
               <h3 className="font-bold">Uma prioridade para orientar o mês</h3>
+              <Link className="btn-outline" to="/metas" search={{ clientId: plan.client_id }}>
+                Consultar metas e cenários do cliente
+              </Link>
               <Field
                 label="Mês"
                 type="month"
@@ -596,7 +641,11 @@ function CycleEditor({
               <div className="flex flex-wrap gap-2">
                 <button
                   className="btn-primary"
-                  onClick={() => change({ ...w, topics: [...w.topics, newTopic()] })}
+                  onClick={() => {
+                    const t = newTopic();
+                    change({ ...w, topics: [...w.topics, t] });
+                    setFocusedTopic(t.id);
+                  }}
                 >
                   Adicionar pauta
                 </button>
@@ -629,84 +678,90 @@ function CycleEditor({
                 Sem proporção fixa: distribua as funções conforme o diagnóstico e a prioridade.
               </p>
             </section>
-            {w.topics.map((t) => (
-              <details key={t.id} className="surface-card p-5 space-y-3">
-                <summary className="cursor-pointer font-bold">
-                  {t.theme || "Nova pauta"}{" "}
-                  <span className="text-sm text-muted-foreground">· {stages[t.status]}</span>
-                </summary>
-                {t.status !== "banco" ? (
-                  <>
-                    <p>{t.approach}</p>
-                    <p className="text-sm">{t.message}</p>
-                    <button
-                      className="btn-outline"
-                      onClick={() =>
-                        patch(t.id, { status: "banco", themeApproval: "", pieceApproval: "" })
-                      }
-                    >
-                      Devolver ao banco para ajustar e aprovar novamente
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <div className="grid gap-3 md:grid-cols-2">
-                      {tfield(t, "theme", "Tema", "text")}
-                      {tfield(t, "approach", "Abordagem / gancho")}
-                      {tfield(t, "audience", "Público")}
-                      {tfield(t, "need", "Problema ou desejo")}
-                      {tfield(t, "message", "Mensagem principal")}
-                      {tfield(t, "cta", "Ação esperada / CTA")}
-                      {tfield(t, "source", "Origem: pergunta, objeção, relatório ou atendimento")}
-                      {tfield(t, "evidence", "Informação ou evidência que sustenta a mensagem")}
-                      {tfield(
-                        t,
-                        "materials",
-                        "Material ou informação que o cliente precisa fornecer",
-                      )}
-                    </div>
-                    <label className="block text-sm">
-                      Função
-                      <select
-                        className="input-base"
-                        value={t.purpose}
-                        onChange={(e) =>
-                          patch(t.id, { purpose: e.target.value as Topic["purpose"] })
+            {w.topics
+              .filter((t) => !focusedTopic || t.id === focusedTopic)
+              .map((t) => (
+                <details
+                  key={t.id}
+                  open={focusedTopic === t.id || undefined}
+                  className="surface-card p-5 space-y-3"
+                >
+                  <summary className="cursor-pointer font-bold">
+                    {t.theme || "Nova pauta"}{" "}
+                    <span className="text-sm text-muted-foreground">· {stages[t.status]}</span>
+                  </summary>
+                  {t.status !== "banco" ? (
+                    <>
+                      <p>{t.approach}</p>
+                      <p className="text-sm">{t.message}</p>
+                      <button
+                        className="btn-outline"
+                        onClick={() =>
+                          patch(t.id, { status: "banco", themeApproval: "", pieceApproval: "" })
                         }
                       >
-                        {Object.entries(functions).map(([key, label]) => (
-                          <option key={key} value={key}>
-                            {label}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    {(
-                      [
-                        ["priority", "Contribui para a prioridade do mês"],
-                        ["audience", "Interessa ao público escolhido"],
-                        ["evidence", "Tem informação ou evidência suficiente"],
-                        ["feasible", "Cabe no contrato, capacidade e prazo"],
-                      ] as const
-                    ).map(([key, label]) => (
-                      <label key={key} className="flex gap-2 text-sm">
-                        <input
-                          type="checkbox"
-                          checked={t.checks[key]}
+                        Devolver ao banco para ajustar e aprovar novamente
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <div className="grid gap-3 md:grid-cols-2">
+                        {tfield(t, "theme", "Tema", "text")}
+                        {tfield(t, "approach", "Abordagem / gancho")}
+                        {tfield(t, "audience", "Público")}
+                        {tfield(t, "need", "Problema ou desejo")}
+                        {tfield(t, "message", "Mensagem principal")}
+                        {tfield(t, "cta", "Ação esperada / CTA")}
+                        {tfield(t, "source", "Origem: pergunta, objeção, relatório ou atendimento")}
+                        {tfield(t, "evidence", "Informação ou evidência que sustenta a mensagem")}
+                        {tfield(
+                          t,
+                          "materials",
+                          "Material ou informação que o cliente precisa fornecer",
+                        )}
+                      </div>
+                      <label className="block text-sm">
+                        Função
+                        <select
+                          className="input-base"
+                          value={t.purpose}
                           onChange={(e) =>
-                            patch(t.id, { checks: { ...t.checks, [key]: e.target.checked } })
+                            patch(t.id, { purpose: e.target.value as Topic["purpose"] })
                           }
-                        />
-                        {label}
+                        >
+                          {Object.entries(functions).map(([key, label]) => (
+                            <option key={key} value={key}>
+                              {label}
+                            </option>
+                          ))}
+                        </select>
                       </label>
-                    ))}
-                    <button className="btn-primary" onClick={() => transition(t, "selecionada")}>
-                      Selecionar para o mês
-                    </button>
-                  </>
-                )}
-              </details>
-            ))}
+                      {(
+                        [
+                          ["priority", "Contribui para a prioridade do mês"],
+                          ["audience", "Interessa ao público escolhido"],
+                          ["evidence", "Tem informação ou evidência suficiente"],
+                          ["feasible", "Cabe no contrato, capacidade e prazo"],
+                        ] as const
+                      ).map(([key, label]) => (
+                        <label key={key} className="flex gap-2 text-sm">
+                          <input
+                            type="checkbox"
+                            checked={t.checks[key]}
+                            onChange={(e) =>
+                              patch(t.id, { checks: { ...t.checks, [key]: e.target.checked } })
+                            }
+                          />
+                          {label}
+                        </label>
+                      ))}
+                      <button className="btn-primary" onClick={() => transition(t, "selecionada")}>
+                        Selecionar para o mês
+                      </button>
+                    </>
+                  )}
+                </details>
+              ))}
           </>
         )}
         {tab === 2 && (
@@ -736,32 +791,37 @@ function CycleEditor({
             {!selected.length && (
               <p>Nenhuma pauta selecionada. Use o banco e os quatro critérios.</p>
             )}
-            {selected.map((t) => (
-              <article key={t.id} className="border rounded-lg p-4 space-y-3">
-                <h4 className="font-bold">
-                  {t.theme} · {stages[t.status]}
-                </h4>
-                <p>{t.approach}</p>
-                <p className="text-sm">
-                  {functions[t.purpose]}: {t.message}
-                </p>
-                <p className="text-sm">Material: {t.materials || "A confirmar"}</p>
-                {t.status === "selecionada" ? (
-                  <>
-                    {tfield(
-                      t,
-                      "themeApproval",
-                      "Quem aprovou, data e referência da aprovação (ex.: conversa ou e-mail)",
-                    )}
-                    <button className="btn-primary" onClick={() => transition(t, "tema_aprovado")}>
-                      Registrar tema aprovado
-                    </button>
-                  </>
-                ) : (
-                  <p className="text-sm">Aprovação: {t.themeApproval}</p>
-                )}
-              </article>
-            ))}
+            {selected
+              .filter((t) => !focusedTopic || t.id === focusedTopic)
+              .map((t) => (
+                <article key={t.id} className="border rounded-lg p-4 space-y-3">
+                  <h4 className="font-bold">
+                    {t.theme} · {stages[t.status]}
+                  </h4>
+                  <p>{t.approach}</p>
+                  <p className="text-sm">
+                    {functions[t.purpose]}: {t.message}
+                  </p>
+                  <p className="text-sm">Material: {t.materials || "A confirmar"}</p>
+                  {t.status === "selecionada" ? (
+                    <>
+                      {tfield(
+                        t,
+                        "themeApproval",
+                        "Quem aprovou, data e referência da aprovação (ex.: conversa ou e-mail)",
+                      )}
+                      <button
+                        className="btn-primary"
+                        onClick={() => transition(t, "tema_aprovado")}
+                      >
+                        Registrar tema aprovado
+                      </button>
+                    </>
+                  ) : (
+                    <p className="text-sm">Aprovação: {t.themeApproval}</p>
+                  )}
+                </article>
+              ))}
           </section>
         )}
         {tab === 3 && (
@@ -807,7 +867,7 @@ function CycleEditor({
               )}
             </section>
             {selected
-              .filter((t) => t.status !== "selecionada")
+              .filter((t) => t.status !== "selecionada" && (!focusedTopic || t.id === focusedTopic))
               .sort((a, b) => (a.productionDue || "9999").localeCompare(b.productionDue || "9999"))
               .map((t) => (
                 <section key={t.id} className="surface-card p-5 space-y-3">
@@ -856,6 +916,8 @@ function CycleEditor({
                         {tfield(t, "owner", "Responsável", "text")}
                         {tfield(t, "materials", "Materiais necessários e pendências")}
                         {tfield(t, "publication", "Data de publicação", "date")}
+                        {tfield(t, "publicationTime", "Horário local de publicação", "time")}
+                        {tfield(t, "testHypothesis", "Hipótese de teste (opcional)")}
                       </div>
                       <label className="block text-sm">
                         Entrega do escopo contratado
@@ -972,11 +1034,12 @@ function CycleEditor({
             <h3 className="font-bold">Calendário de publicação</h3>
             {!selected.length && <p>Selecione pautas para montar o calendário.</p>}
             {[...selected]
+              .filter((t) => !focusedTopic || t.id === focusedTopic)
               .sort((a, b) => (a.publication || "9999").localeCompare(b.publication || "9999"))
               .map((t) => (
                 <article key={t.id} className="border rounded-lg p-4 space-y-2">
                   <h4 className="font-bold">
-                    {dateLabel(t.publication)} · {t.theme}
+                    {dateLabel(t.publication)} {t.publicationTime} · {t.theme}
                   </h4>
                   <p className="text-sm">
                     {t.channel || "Canal pendente"} ·{" "}

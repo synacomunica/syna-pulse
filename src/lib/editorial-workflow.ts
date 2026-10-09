@@ -63,6 +63,10 @@ export const topicSchema = z.object({
   materials: text,
   owner: text,
   publication: optionalDate,
+  publicationTime: z
+    .union([z.literal(""), z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/)])
+    .default(""),
+  testHypothesis: text.default(""),
   scriptDue: optionalDate,
   captureDue: optionalDate,
   productionDue: optionalDate,

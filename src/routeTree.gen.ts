@@ -20,6 +20,7 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as AuthenticatedDiagnosticosRouteImport } from './routes/_authenticated/diagnosticos'
 import { Route as AuthenticatedFormulariosRouteImport } from './routes/_authenticated/formularios'
 import { Route as AuthenticatedMatrizRouteImport } from './routes/_authenticated/matriz'
+import { Route as AuthenticatedMetasRouteImport } from './routes/_authenticated/metas'
 import { Route as AuthenticatedPerformanceRouteImport } from './routes/_authenticated/performance'
 import { Route as AuthenticatedPlanoDeAcaoRouteImport } from './routes/_authenticated/plano-de-acao'
 import { Route as AuthenticatedPlanoDeMarketingRouteImport } from './routes/_authenticated/plano-de-marketing'
@@ -87,6 +88,11 @@ const AuthenticatedMatrizRoute = AuthenticatedMatrizRouteImport.update({
   path: '/matriz',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedMetasRoute = AuthenticatedMetasRouteImport.update({
+  id: '/metas',
+  path: '/metas',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedPerformanceRoute =
   AuthenticatedPerformanceRouteImport.update({
     id: '/performance',
@@ -149,6 +155,7 @@ export interface FileRoutesByFullPath {
   '/diagnosticos': typeof AuthenticatedDiagnosticosRouteWithChildren
   '/formularios': typeof AuthenticatedFormulariosRoute
   '/matriz': typeof AuthenticatedMatrizRoute
+  '/metas': typeof AuthenticatedMetasRoute
   '/performance': typeof AuthenticatedPerformanceRoute
   '/plano-de-acao': typeof AuthenticatedPlanoDeAcaoRoute
   '/plano-de-marketing': typeof AuthenticatedPlanoDeMarketingRouteWithChildren
@@ -170,6 +177,7 @@ export interface FileRoutesByTo {
   '/diagnosticos': typeof AuthenticatedDiagnosticosRouteWithChildren
   '/formularios': typeof AuthenticatedFormulariosRoute
   '/matriz': typeof AuthenticatedMatrizRoute
+  '/metas': typeof AuthenticatedMetasRoute
   '/performance': typeof AuthenticatedPerformanceRoute
   '/plano-de-acao': typeof AuthenticatedPlanoDeAcaoRoute
   '/plano-de-marketing': typeof AuthenticatedPlanoDeMarketingRouteWithChildren
@@ -193,6 +201,7 @@ export interface FileRoutesById {
   '/_authenticated/diagnosticos': typeof AuthenticatedDiagnosticosRouteWithChildren
   '/_authenticated/formularios': typeof AuthenticatedFormulariosRoute
   '/_authenticated/matriz': typeof AuthenticatedMatrizRoute
+  '/_authenticated/metas': typeof AuthenticatedMetasRoute
   '/_authenticated/performance': typeof AuthenticatedPerformanceRoute
   '/_authenticated/plano-de-acao': typeof AuthenticatedPlanoDeAcaoRoute
   '/_authenticated/plano-de-marketing': typeof AuthenticatedPlanoDeMarketingRouteWithChildren
@@ -216,6 +225,7 @@ export interface FileRouteTypes {
     | '/diagnosticos'
     | '/formularios'
     | '/matriz'
+    | '/metas'
     | '/performance'
     | '/plano-de-acao'
     | '/plano-de-marketing'
@@ -237,6 +247,7 @@ export interface FileRouteTypes {
     | '/diagnosticos'
     | '/formularios'
     | '/matriz'
+    | '/metas'
     | '/performance'
     | '/plano-de-acao'
     | '/plano-de-marketing'
@@ -259,6 +270,7 @@ export interface FileRouteTypes {
     | '/_authenticated/diagnosticos'
     | '/_authenticated/formularios'
     | '/_authenticated/matriz'
+    | '/_authenticated/metas'
     | '/_authenticated/performance'
     | '/_authenticated/plano-de-acao'
     | '/_authenticated/plano-de-marketing'
@@ -356,6 +368,13 @@ declare module '@tanstack/react-router' {
       path: '/matriz'
       fullPath: '/matriz'
       preLoaderRoute: typeof AuthenticatedMatrizRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/metas': {
+      id: '/_authenticated/metas'
+      path: '/metas'
+      fullPath: '/metas'
+      preLoaderRoute: typeof AuthenticatedMetasRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/performance': {
@@ -474,6 +493,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDiagnosticosRoute: typeof AuthenticatedDiagnosticosRouteWithChildren
   AuthenticatedFormulariosRoute: typeof AuthenticatedFormulariosRoute
   AuthenticatedMatrizRoute: typeof AuthenticatedMatrizRoute
+  AuthenticatedMetasRoute: typeof AuthenticatedMetasRoute
   AuthenticatedPerformanceRoute: typeof AuthenticatedPerformanceRoute
   AuthenticatedPlanoDeAcaoRoute: typeof AuthenticatedPlanoDeAcaoRoute
   AuthenticatedPlanoDeMarketingRoute: typeof AuthenticatedPlanoDeMarketingRouteWithChildren
@@ -488,6 +508,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDiagnosticosRoute: AuthenticatedDiagnosticosRouteWithChildren,
   AuthenticatedFormulariosRoute: AuthenticatedFormulariosRoute,
   AuthenticatedMatrizRoute: AuthenticatedMatrizRoute,
+  AuthenticatedMetasRoute: AuthenticatedMetasRoute,
   AuthenticatedPerformanceRoute: AuthenticatedPerformanceRoute,
   AuthenticatedPlanoDeAcaoRoute: AuthenticatedPlanoDeAcaoRoute,
   AuthenticatedPlanoDeMarketingRoute:

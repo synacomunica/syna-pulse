@@ -11,7 +11,7 @@ const { generatePlan } = await import(
     "./marketing-plan": vocabulary,
   })
 );
-function database(status) {
+function database(status, scenarios = []) {
   const inserted = [];
   const records = {
     diagnostics: {
@@ -31,6 +31,7 @@ function database(status) {
     metric_values: [],
     goals: [],
     marketing_plans: [],
+    marketing_scenarios: scenarios,
     action_items: [],
     client_scopes: [],
     client_documents: [],
@@ -133,6 +134,11 @@ test("Gemini key selects Google endpoint and parses a strategic plan", async () 
     const body = JSON.parse(options.body);
     assert.equal(body.response_format.type, "json_schema");
     assert.ok(body.response_format.json_schema.schema.properties.jornada_5a);
+    const evidence = JSON.parse(body.messages[1].content).fontes.find(
+      (s) => s.id === "scenario:simulation",
+    );
+    assert.equal(evidence.kind, "hipotese");
+    assert.equal(JSON.parse(evidence.value).calculos.sales, 10);
     return new Response(
       JSON.stringify({
         choices: [
@@ -158,7 +164,13 @@ test("Gemini key selects Google endpoint and parses a strategic plan", async () 
     );
   };
   try {
-    const db = database("validado");
+    const db = database("validado", [
+      {
+        id: "simulation",
+        updated_at: "2026-10-09",
+        content: { month: "2026-10", revenue: 7000, target: 15000, ticket: 800 },
+      },
+    ]);
     await generatePlan(db, "diagnostic");
     assert.ok(called);
     assert.equal(db.inserted[0].content.estrategia_central, "Resolver conversão");

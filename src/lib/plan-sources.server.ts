@@ -1,3 +1,4 @@
+import { calculateScenario, scenarioSchema } from "./marketing-scenario";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import type { Source } from "./planning-policy";
@@ -28,7 +29,32 @@ export async function diagnosticSources(
       .limit(200),
   ]);
   for (const r of [answers, scores, diagnostic, client, metrics]) if (r.error) throw r.error;
+  const scenarios = await db
+    .from("marketing_scenarios")
+    .select("id,content,updated_at")
+    .eq("client_id", clientId)
+    .order("created_at", { ascending: false })
+    .limit(1);
+  if (scenarios.error) throw scenarios.error;
+  const row = scenarios.data[0];
+  const scenario = row ? scenarioSchema.safeParse(row.content) : null;
+  const scenarioSources: Source[] =
+    row && scenario?.success
+      ? [
+          {
+            id: `scenario:${row.id}`,
+            kind: "hipotese",
+            date: row.updated_at,
+            reference: `Cenário de metas — ${scenario.data.month} (simulação, não resultado observado)`,
+            value: JSON.stringify({
+              premissas: scenario.data,
+              calculos: calculateScenario(scenario.data),
+            }),
+          },
+        ]
+      : [];
   return [
+    ...scenarioSources,
     ...Object.entries(client.data ?? {}).map(([key, value]) => ({
       id: `client:${key}`,
       kind: "declarado" as const,
